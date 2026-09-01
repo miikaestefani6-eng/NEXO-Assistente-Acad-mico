@@ -1,23 +1,36 @@
 import { useMemo, useState } from "react";
+import { generateDailyMissions } from "./lib/nexo/dailyMissions";
 import { buildRecoveryPlan } from "./lib/nexo/planner";
 
-type Task = { id: number; title: string; subject: string; duration: string; type: string; time: string; description: string; steps: string[]; completed: boolean };
+type Task = { id: string; title: string; subject: string; duration: string; type: string; time: string; description: string; steps: string[]; completed: boolean };
+
+const missionSource = generateDailyMissions([
+  { code: "EST-PROB", name: "Estatística e Probabilidade", pendingLessons: 13, pendingExercises: 14, pendingAssignments: 4, daysUntilExam: 14 },
+  { code: "CALC-II", name: "Cálculo II", pendingLessons: 9, pendingExercises: 13, pendingAssignments: 2, daysUntilExam: 21 },
+  { code: "ADM-FUND", name: "Fundamentos da Administração", pendingLessons: 4, pendingExercises: 6, pendingAssignments: 1, daysUntilExam: 28 },
+], 90);
+
+const generatedTasks: Task[] = missionSource.map((mission, index) => ({
+  id: mission.id,
+  title: mission.title,
+  subject: mission.subject,
+  duration: `${mission.duration} min`,
+  type: mission.type,
+  time: index === 0 ? "Agora" : index === 1 ? "Depois" : "A seguir",
+  description: mission.priority === "urgente" ? "Prioridade alta: avance nesta missão antes de mudar de disciplina." : "O NEXO colocou esta missão na sequência para manter seu semestre sob controle.",
+  steps: mission.type === "Aula" ? ["Abrir a próxima aula pendente", "Assistir ao conteúdo completo", "Anotar os conceitos principais", "Registrar dúvidas", "Marcar a aula como concluída"] : mission.type === "Exercício" ? ["Abrir os próximos exercícios", "Ler todas as questões", "Resolver sem consultar a resposta", "Revisar os resultados", "Enviar a atividade"] : mission.type === "Trabalho" ? ["Abrir a atividade", "Revisar o que precisa ser entregue", "Avançar na produção", "Revisar o material", "Salvar o progresso"] : ["Revisar os pontos fracos", "Conferir dúvidas registradas", "Escolher o conteúdo que precisa de reforço", "Fazer uma revisão curta", "Registrar o próximo passo"],
+  completed: false,
+}));
 
 function App() {
   const plan = buildRecoveryPlan({ pendingLessons: 13, pendingExercises: 14, pendingAssignments: 4, daysUntilExam: 14, availableMinutesPerDay: 90 });
-  const [tasks, setTasks] = useState<Task[]>([
-    { id: 1, title: "Participar da aula ao vivo", subject: "Estatística e Probabilidade", duration: "1h30", type: "Aula ao vivo", time: "19:00", description: "Participe da aula ao vivo e acompanhe o conteúdo apresentado pelo professor.", steps: ["Entrar na aula às 19:00", "Assistir à aula completa", "Fazer anotações importantes", "Marcar as dúvidas que surgirem", "Encerrar a aula somente após a conclusão"], completed: false },
-    { id: 2, title: "Assistir Aula 02", subject: "Estatística e Probabilidade", duration: "35 min", type: "Aula da plataforma", time: "20:45", description: "Avance no conteúdo da plataforma antes de começar os exercícios.", steps: ["Abrir a Aula 02", "Assistir ao conteúdo completo", "Anotar os conceitos principais", "Registrar dúvidas", "Marcar a aula como concluída"], completed: false },
-    { id: 3, title: "Fazer Exercício 01", subject: "Estatística e Probabilidade", duration: "20 min", type: "Exercício", time: "21:30", description: "Coloque em prática o conteúdo estudado na aula.", steps: ["Abrir o exercício", "Ler todas as questões", "Resolver sem consultar a resposta", "Revisar as respostas", "Enviar a atividade"], completed: false },
-    { id: 4, title: "Fazer Exercício 02", subject: "Estatística e Probabilidade", duration: "20 min", type: "Exercício", time: "22:00", description: "Continue a sequência de exercícios da disciplina.", steps: ["Abrir o exercício", "Resolver as questões", "Revisar os resultados", "Corrigir os erros", "Enviar a atividade"], completed: false },
-  ]);
-  const [stepProgress, setStepProgress] = useState<Record<number, number[]>>({});
+  const [tasks, setTasks] = useState<Task[]>(generatedTasks);
+  const [stepProgress, setStepProgress] = useState<Record<string, number[]>>({});
   const completedTasks = tasks.filter((task) => task.completed).length;
   const progress = useMemo(() => tasks.length === 0 ? 0 : Math.round((completedTasks / tasks.length) * 100), [completedTasks, tasks.length]);
   const currentTask = tasks.find((task) => !task.completed) ?? null;
-
-  function toggleStep(taskId: number, stepIndex: number) { setStepProgress((current) => { const existing = current[taskId] ?? []; const updated = existing.includes(stepIndex) ? existing.filter((index) => index !== stepIndex) : [...existing, stepIndex]; return { ...current, [taskId]: updated }; }); }
-  function completeTask(id: number) { const task = tasks.find((item) => item.id === id); if (!task) return; const completedSteps = stepProgress[id] ?? []; if (completedSteps.length < task.steps.length) return; setTasks((current) => current.map((item) => item.id === id ? { ...item, completed: true } : item)); }
+  function toggleStep(taskId: string, stepIndex: number) { setStepProgress((current) => { const existing = current[taskId] ?? []; const updated = existing.includes(stepIndex) ? existing.filter((index) => index !== stepIndex) : [...existing, stepIndex]; return { ...current, [taskId]: updated }; }); }
+  function completeTask(id: string) { const task = tasks.find((item) => item.id === id); if (!task) return; const completedSteps = stepProgress[id] ?? []; if (completedSteps.length < task.steps.length) return; setTasks((current) => current.map((item) => item.id === id ? { ...item, completed: true } : item)); }
   const currentCompletedSteps = currentTask ? (stepProgress[currentTask.id] ?? []).length : 0;
   const currentTotalSteps = currentTask ? currentTask.steps.length : 0;
   const checklistComplete = currentTask !== null && currentCompletedSteps === currentTotalSteps;
