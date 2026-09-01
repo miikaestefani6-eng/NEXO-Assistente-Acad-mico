@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import Agenda from "./Agenda";
+import Disciplinas from "./Disciplinas";
 import "./styles.css";
 import "./nexo-enhancements.css";
 
@@ -19,24 +20,19 @@ function Router() {
       const target = event.target as HTMLElement | null;
       const link = target?.closest("a[href]") as HTMLAnchorElement | null;
       if (!link) return;
-
       const href = link.getAttribute("href");
       if (!href || !href.startsWith("/") || href.startsWith("//")) return;
-
       event.preventDefault();
       window.history.pushState({}, "", href);
       setPath(href);
       window.scrollTo({ top: 0, behavior: "smooth" });
     };
-
     document.addEventListener("click", handleInternalNavigation);
     return () => document.removeEventListener("click", handleInternalNavigation);
   }, []);
 
-  if (path === "/agenda") {
-    return <Agenda />;
-  }
-
+  if (path === "/agenda") return <Agenda />;
+  if (path === "/disciplinas") return <Disciplinas />;
   return <App />;
 }
 
