@@ -26,6 +26,66 @@ function getOutputText(data: any): string {
   return parts.join("\n").trim();
 }
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function callGemini(
+  apiKey: string,
+  model: string,
+  systemInstruction: string,
+  prompt: string,
+  retries: number,
+  delays: number[],
+) {
+  let lastFailure: { status: number; code: string; message: string } | null = null;
+
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey,
+        },
+        body: JSON.stringify({
+          system_instruction: {
+            parts: [{ text: systemInstruction }],
+          },
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: prompt }],
+            },
+          ],
+          generation_config: {
+            max_output_tokens: 500,
+          },
+        }),
+      },
+    );
+
+    const data = await response.json();
+    if (response.ok) {
+      return { data, failure: null };
+    }
+
+    const code = typeof data?.error?.status === "string" ? data.error.status : "unknown";
+    const providerMessage = typeof data?.error?.message === "string" ? data.error.message : "";
+    lastFailure = { status: response.status, code, message: providerMessage };
+
+    const retryable = response.status === 503 || response.status === 429 || response.status === 500;
+    if (!retryable || attempt >= retries) break;
+
+    const delay = delays[Math.min(attempt, delays.length - 1)] ?? 5000;
+    console.warn(`NEXO Gemini ${model} indisponível (${response.status}/${code}). Tentando novamente em ${delay}ms.`);
+    await sleep(delay);
+  }
+
+  return { data: null, failure: lastFailure };
+}
+
 export default async function handler(req: any, res: any) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Método não permitido." });
@@ -76,44 +136,46 @@ MENSAGEM DO ESTUDANTE:
 ${message}`;
 
   try {
-    const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": apiKey,
-        },
-        body: JSON.stringify({
-          system_instruction: {
-            parts: [{ text: systemInstruction }],
-          },
-          contents: [
-            {
-              role: "user",
-              parts: [{ text: prompt }],
-            },
-          ],
-          generation_config: {
-            max_output_tokens: 500,
-          },
-        }),
-      },
+    // Primeira linha: tenta o modelo principal algumas vezes com backoff exponencial.
+    const primary = await callGemini(
+      apiKey,
+      "gemini-3.7-flash",
+      systemInstruction,
+      prompt,
+      3,
+      [2000, 5000, 10000],
     );
 
-    const data = await response.json();
-    if (!response.ok) {
-      const code = typeof data?.error?.status === "string" ? data.error.status : "unknown";
-      const providerMessage = typeof data?.error?.message === "string" ? data.error.message : "";
-      console.error("NEXO Gemini error", response.status, code, providerMessage);
+    let result = primary;
+
+    // Se o modelo principal estiver congestionado, troca automaticamente para um modelo Flash-Lite.
+    if (primary.failure?.status === 503) {
+      console.warn("NEXO Gemini: ativando fallback para gemini-3.5-flash-lite.");
+      result = await callGemini(
+        apiKey,
+        "gemini-3.5-flash-lite",
+        systemInstruction,
+        prompt,
+        2,
+        [3000, 8000],
+      );
+    }
+
+    if (result.failure) {
+      console.error(
+        "NEXO Gemini error",
+        result.failure.status,
+        result.failure.code,
+        result.failure.message,
+      );
       return res.status(502).json({
-        error: `O Gemini recusou a solicitação (${response.status}/${code}).${providerMessage ? ` ${providerMessage}` : ""}`,
-        providerStatus: response.status,
-        providerCode: code,
+        error: `O Gemini recusou a solicitação (${result.failure.status}/${result.failure.code}).${result.failure.message ? ` ${result.failure.message}` : ""}`,
+        providerStatus: result.failure.status,
+        providerCode: result.failure.code,
       });
     }
 
-    const output = getOutputText(data);
+    const output = getOutputText(result.data);
     if (!output) {
       return res.status(502).json({ error: "O Gemini não retornou uma resposta válida." });
     }
