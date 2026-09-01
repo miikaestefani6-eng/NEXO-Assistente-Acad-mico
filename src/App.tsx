@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { generateDailyMissions } from "./lib/nexo/dailyMissions";
 import { buildRecoveryPlan } from "./lib/nexo/planner";
 import { applyMissionCompletion, loadAcademicState, saveAcademicState } from "./lib/nexo/academicState";
-import { completeCmsActivity, loadCmsActivities, loadCmsEvents, saveCmsActivities, toggleCmsActivityStep, type CmsActivity, type CmsEvent } from "./lib/nexo/cmsState";
+import { completeCmsActivity, loadCmsActivities, loadCmsEvents, toggleCmsActivityStep, type CmsEvent } from "./lib/nexo/cmsState";
 
 type Task = { id: string; cmsId?: string; title: string; subject: string; duration: string; durationMinutes: number; type: string; time: string; description: string; steps: string[]; completed: boolean };
 
@@ -23,7 +23,8 @@ function buildTasks(): Task[] {
   const today = todayISO();
   const activities = loadCmsActivities().filter((activity) => !activity.done && (!activity.dueDate || activity.dueDate === today));
   const cmsTasks = activities.map((activity, index) => ({
-    id: `cms-${activity.id}`, cmsId: activity.id, title: activity.title, subject: byCode.get(activity.disciplineCode) ?? activity.disciplineCode || "Atividade acadêmica",
+    id: `cms-${activity.id}`, cmsId: activity.id, title: activity.title,
+    subject: byCode.get(activity.disciplineCode) ?? (activity.disciplineCode || "Atividade acadêmica"),
     duration: `${activity.minutes} min`, durationMinutes: activity.minutes, type: activity.type, time: index === 0 ? "Agora" : "A seguir",
     description: activity.type === "Aula ao vivo" ? "Aula ao vivo cadastrada no CMS. O NEXO separa esse compromisso das aulas da plataforma." : "Atividade cadastrada no CMS e incorporada ao seu próximo passo.",
     steps: activity.checklist.map((step) => step.label), completed: activity.done
@@ -62,12 +63,8 @@ function App() {
     if (!task) return;
     const completedSteps = stepProgress[id] ?? [];
     if (completedSteps.length < task.steps.length) return;
-    if (task.cmsId) {
-      completeCmsActivity(task.cmsId);
-    } else {
-      const updatedState = applyMissionCompletion(loadAcademicState(), id);
-      saveAcademicState(updatedState);
-    }
+    if (task.cmsId) completeCmsActivity(task.cmsId);
+    else saveAcademicState(applyMissionCompletion(loadAcademicState(), id));
     setTasks((current) => current.map((item) => item.id === id ? { ...item, completed: true } : item));
   }
 
