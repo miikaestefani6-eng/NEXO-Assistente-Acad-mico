@@ -70,8 +70,13 @@ export default async function handler(req: any, res: any) {
 
     const data = await response.json();
     if (!response.ok) {
-      console.error("NEXO OpenAI error", response.status, data?.error?.code ?? "unknown");
-      return res.status(502).json({ error: "Não consegui falar com a IA agora. Tente novamente em alguns segundos." });
+      const code = typeof data?.error?.code === "string" ? data.error.code : "unknown";
+      console.error("NEXO OpenAI error", response.status, code);
+      return res.status(502).json({
+        error: `A OpenAI recusou a solicitação (${response.status}/${code}).`,
+        providerStatus: response.status,
+        providerCode: code,
+      });
     }
 
     const output = getOutputText(data);
