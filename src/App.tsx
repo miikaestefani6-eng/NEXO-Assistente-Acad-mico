@@ -6,6 +6,9 @@ type Task = {
   subject: string;
   duration: string;
   type: string;
+  time: string;
+  description: string;
+  steps: string[];
   completed: boolean;
 };
 
@@ -17,6 +20,16 @@ function App() {
       subject: "Estatística e Probabilidade",
       duration: "1h30",
       type: "Aula ao vivo",
+      time: "19:00",
+      description:
+        "Participe da aula ao vivo e acompanhe o conteúdo apresentado pelo professor.",
+      steps: [
+        "Entrar na aula às 19:00",
+        "Assistir à aula completa",
+        "Fazer anotações importantes",
+        "Marcar as dúvidas que surgirem",
+        "Encerrar a aula somente após a conclusão",
+      ],
       completed: false,
     },
     {
@@ -25,6 +38,16 @@ function App() {
       subject: "Estatística e Probabilidade",
       duration: "35 min",
       type: "Aula da plataforma",
+      time: "20:45",
+      description:
+        "Avance no conteúdo da plataforma antes de começar os exercícios.",
+      steps: [
+        "Abrir a Aula 02",
+        "Assistir ao conteúdo completo",
+        "Anotar os conceitos principais",
+        "Registrar dúvidas",
+        "Marcar a aula como concluída",
+      ],
       completed: false,
     },
     {
@@ -33,6 +56,16 @@ function App() {
       subject: "Estatística e Probabilidade",
       duration: "20 min",
       type: "Exercício",
+      time: "21:30",
+      description:
+        "Coloque em prática o conteúdo estudado na aula.",
+      steps: [
+        "Abrir o exercício",
+        "Ler todas as questões",
+        "Resolver sem consultar a resposta",
+        "Revisar as respostas",
+        "Enviar a atividade",
+      ],
       completed: false,
     },
     {
@@ -41,29 +74,85 @@ function App() {
       subject: "Estatística e Probabilidade",
       duration: "20 min",
       type: "Exercício",
+      time: "22:00",
+      description:
+        "Continue a sequência de exercícios da disciplina.",
+      steps: [
+        "Abrir o exercício",
+        "Resolver as questões",
+        "Revisar os resultados",
+        "Corrigir os erros",
+        "Enviar a atividade",
+      ],
       completed: false,
     },
   ]);
 
-  const completedTasks = tasks.filter((task) => task.completed).length;
+  const [stepProgress, setStepProgress] = useState<
+    Record<number, number[]>
+  >({});
+
+  const completedTasks = tasks.filter(
+    (task) => task.completed
+  ).length;
 
   const progress = useMemo(() => {
     if (tasks.length === 0) return 0;
-    return Math.round((completedTasks / tasks.length) * 100);
+
+    return Math.round(
+      (completedTasks / tasks.length) * 100
+    );
   }, [completedTasks, tasks.length]);
 
   const currentTask =
     tasks.find((task) => !task.completed) ?? null;
 
+  function toggleStep(taskId: number, stepIndex: number) {
+    setStepProgress((current) => {
+      const existing = current[taskId] ?? [];
+
+      const updated = existing.includes(stepIndex)
+        ? existing.filter((index) => index !== stepIndex)
+        : [...existing, stepIndex];
+
+      return {
+        ...current,
+        [taskId]: updated,
+      };
+    });
+  }
+
   function completeTask(id: number) {
+    const task = tasks.find((item) => item.id === id);
+
+    if (!task) return;
+
+    const completedSteps = stepProgress[id] ?? [];
+
+    if (completedSteps.length < task.steps.length) {
+      return;
+    }
+
     setTasks((current) =>
-      current.map((task) =>
-        task.id === id
-          ? { ...task, completed: true }
-          : task
+      current.map((item) =>
+        item.id === id
+          ? { ...item, completed: true }
+          : item
       )
     );
   }
+
+  const currentCompletedSteps = currentTask
+    ? (stepProgress[currentTask.id] ?? []).length
+    : 0;
+
+  const currentTotalSteps = currentTask
+    ? currentTask.steps.length
+    : 0;
+
+  const checklistComplete =
+    currentTask !== null &&
+    currentCompletedSteps === currentTotalSteps;
 
   return (
     <div className="app">
@@ -72,6 +161,7 @@ function App() {
       <header className="topbar">
         <div className="brand-area">
           <span className="brand">NEXO</span>
+
           <span className="brand-subtitle">
             Assistente Acadêmico
           </span>
@@ -81,9 +171,18 @@ function App() {
           <a className="active" href="#">
             Hoje
           </a>
-          <a href="#">Agenda</a>
-          <a href="#">Disciplinas</a>
-          <a href="#">Progresso</a>
+
+          <a href="#">
+            Agenda
+          </a>
+
+          <a href="#">
+            Disciplinas
+          </a>
+
+          <a href="#">
+            Progresso
+          </a>
         </nav>
 
         <div className="student">
@@ -96,7 +195,6 @@ function App() {
         </div>
       </header>
 
-      {/* MAIN */}
       <main className="main-content">
 
         {/* WELCOME */}
@@ -126,6 +224,7 @@ function App() {
 
             <div>
               <strong>Progresso de hoje</strong>
+
               <span>
                 {completedTasks} de {tasks.length} missões
               </span>
@@ -133,15 +232,17 @@ function App() {
           </div>
         </section>
 
-        {/* DASHBOARD GRID */}
+        {/* DASHBOARD */}
         <section className="dashboard-grid">
 
-          {/* MAIN MISSION */}
           <div className="mission-column">
 
             <div className="mission-header">
               <div>
-                <p className="eyebrow">SEU PRÓXIMO PASSO</p>
+                <p className="eyebrow">
+                  SEU PRÓXIMO PASSO
+                </p>
+
                 <h2>Agora</h2>
               </div>
 
@@ -156,46 +257,134 @@ function App() {
                 <div className="mission-top">
                   <div className="mission-label">
                     <span className="status-dot"></span>
+
                     {currentTask.type}
                   </div>
 
                   <span className="mission-time">
-                    19:00
+                    {currentTask.time}
                   </span>
                 </div>
 
                 <div className="mission-content">
+
                   <p className="mission-subject">
                     {currentTask.subject}
                   </p>
 
-                  <h3>{currentTask.title}</h3>
+                  <h3>
+                    {currentTask.title}
+                  </h3>
 
                   <p className="mission-description">
-                    Este é o seu próximo passo.
-                    Concentre-se apenas nele.
-                    O NEXO cuida do que vem depois.
+                    {currentTask.description}
                   </p>
+
+                  {/* CHECKLIST */}
+                  <div className="mission-checklist">
+
+                    <div className="checklist-header">
+                      <span>
+                        Checklist
+                      </span>
+
+                      <span>
+                        {currentCompletedSteps}/
+                        {currentTotalSteps}
+                      </span>
+                    </div>
+
+                    <div className="checklist-progress">
+                      <div
+                        style={{
+                          width:
+                            currentTotalSteps === 0
+                              ? "0%"
+                              : `${
+                                  (currentCompletedSteps /
+                                    currentTotalSteps) *
+                                  100
+                                }%`,
+                        }}
+                      />
+                    </div>
+
+                    <div className="checklist-items">
+
+                      {currentTask.steps.map(
+                        (step, index) => {
+                          const checked =
+                            (
+                              stepProgress[
+                                currentTask.id
+                              ] ?? []
+                            ).includes(index);
+
+                          return (
+                            <button
+                              key={step}
+                              className={
+                                checked
+                                  ? "checklist-item checked"
+                                  : "checklist-item"
+                              }
+                              onClick={() =>
+                                toggleStep(
+                                  currentTask.id,
+                                  index
+                                )
+                              }
+                            >
+                              <span className="check-box">
+                                {checked ? "✓" : ""}
+                              </span>
+
+                              <span>
+                                {step}
+                              </span>
+                            </button>
+                          );
+                        }
+                      )}
+
+                    </div>
+                  </div>
+
                 </div>
 
                 <div className="mission-footer">
+
                   <span className="duration">
                     ⏱ {currentTask.duration}
                   </span>
 
                   <button
-                    className="complete-button"
-                    onClick={() => completeTask(currentTask.id)}
+                    className={
+                      checklistComplete
+                        ? "complete-button"
+                        : "complete-button disabled"
+                    }
+                    onClick={() =>
+                      completeTask(currentTask.id)
+                    }
+                    disabled={!checklistComplete}
                   >
-                    Concluir missão
+                    {checklistComplete
+                      ? "Concluir missão"
+                      : "Complete o checklist"}
+
                     <span>→</span>
                   </button>
+
                 </div>
 
               </article>
             ) : (
               <article className="mission-card mission-complete">
-                <div className="success-icon">✓</div>
+
+                <div className="success-icon">
+                  ✓
+                </div>
 
                 <h3>
                   Você terminou tudo por hoje.
@@ -205,34 +394,49 @@ function App() {
                   Excelente. Amanhã o NEXO prepara
                   o próximo passo.
                 </p>
+
               </article>
             )}
 
-            {/* AFTER */}
+            {/* NEXT */}
             <div className="after-section">
 
               <div className="section-heading">
+
                 <div>
-                  <p className="eyebrow">DEPOIS</p>
-                  <h2>A seguir</h2>
+                  <p className="eyebrow">
+                    DEPOIS
+                  </p>
+
+                  <h2>
+                    A seguir
+                  </h2>
                 </div>
+
               </div>
 
               <div className="task-list">
 
                 {tasks
-                  .filter((task) => !task.completed)
+                  .filter(
+                    (task) => !task.completed
+                  )
                   .slice(1)
                   .map((task, index) => (
                     <div
                       className="task"
                       key={task.id}
                     >
+
                       <span className="task-number">
-                        {String(index + 1).padStart(2, "0")}
+                        {String(index + 1).padStart(
+                          2,
+                          "0"
+                        )}
                       </span>
 
                       <div className="task-main">
+
                         <span className="task-type">
                           {task.type}
                         </span>
@@ -242,27 +446,35 @@ function App() {
                         </strong>
 
                         <p>
-                          {task.subject} · {task.duration}
+                          {task.subject} ·{" "}
+                          {task.duration}
                         </p>
+
                       </div>
 
                       <span className="task-arrow">
                         →
                       </span>
+
                     </div>
                   ))}
 
               </div>
+
             </div>
+
           </div>
 
           {/* SIDEBAR */}
           <aside className="sidebar">
 
-            {/* TODAY */}
             <div className="side-card">
+
               <div className="side-card-header">
-                <span className="side-icon">◷</span>
+
+                <span className="side-icon">
+                  ◷
+                </span>
 
                 <div>
                   <p className="eyebrow">
@@ -273,9 +485,11 @@ function App() {
                     Seu dia
                   </h3>
                 </div>
+
               </div>
 
               <div className="day-stat">
+
                 <strong>
                   {completedTasks}
                 </strong>
@@ -283,20 +497,24 @@ function App() {
                 <span>
                   concluídas
                 </span>
+
               </div>
 
               <div className="day-stat">
+
                 <strong>
-                  {tasks.length - completedTasks}
+                  {tasks.length -
+                    completedTasks}
                 </strong>
 
                 <span>
                   restantes
                 </span>
+
               </div>
+
             </div>
 
-            {/* NEXT EXAM */}
             <div className="side-card exam-card">
 
               <p className="eyebrow">
@@ -309,6 +527,7 @@ function App() {
               </h3>
 
               <div className="exam-date">
+
                 <strong>
                   15
                 </strong>
@@ -316,6 +535,7 @@ function App() {
                 <span>
                   SET
                 </span>
+
               </div>
 
               <p className="exam-warning">
@@ -328,7 +548,6 @@ function App() {
 
             </div>
 
-            {/* ALERT */}
             <div className="alert-card">
 
               <span className="alert-icon">
@@ -336,6 +555,7 @@ function App() {
               </span>
 
               <div>
+
                 <strong>
                   Atenção
                 </strong>
@@ -344,6 +564,7 @@ function App() {
                   Você tem 14 exercícios
                   pendentes nesta disciplina.
                 </p>
+
               </div>
 
             </div>
@@ -351,9 +572,9 @@ function App() {
           </aside>
 
         </section>
+
       </main>
 
-      {/* AI ASSISTANT */}
       <button
         className="assistant-button"
         onClick={() =>
