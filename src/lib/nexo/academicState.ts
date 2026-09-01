@@ -18,13 +18,16 @@ export function saveAcademicState(state: AcademicDiscipline[]) {
 }
 
 export function applyMissionCompletion(state: AcademicDiscipline[], missionId: string) {
-  const code = missionId.split("-")[0] === "EST" ? "EST-PROB" : missionId.split("-")[0] === "CALC" ? "CALC-II" : missionId.split("-")[0] === "ADM" ? "ADM-FUND" : null;
-  if (!code) return state;
+  let code: string | null = null;
+  let kind: "lesson" | "exercise" | "assignment" | null = null;
+  if (missionId.endsWith("-lesson")) { code = missionId.slice(0, -"-lesson".length); kind = "lesson"; }
+  else if (missionId.endsWith("-exercise")) { code = missionId.slice(0, -"-exercise".length); kind = "exercise"; }
+  else if (missionId.endsWith("-assignment")) { code = missionId.slice(0, -"-assignment".length); kind = "assignment"; }
+  if (!code || !kind) return state;
   return state.map((d) => {
     if (d.code !== code) return d;
-    if (missionId.endsWith("-lesson")) return { ...d, lessonsDone: Math.min(d.lessons, d.lessonsDone + 1) };
-    if (missionId.endsWith("-exercise")) return { ...d, exercisesDone: Math.min(d.exercises, d.exercisesDone + 1) };
-    if (missionId.endsWith("-assignment")) return { ...d, assignmentsDone: Math.min(d.assignments, d.assignmentsDone + 1) };
-    return d;
+    if (kind === "lesson") return { ...d, lessonsDone: Math.min(d.lessons, d.lessonsDone + 1) };
+    if (kind === "exercise") return { ...d, exercisesDone: Math.min(d.exercises, d.exercisesDone + 1) };
+    return { ...d, assignmentsDone: Math.min(d.assignments, d.assignmentsDone + 1) };
   });
 }
