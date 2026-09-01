@@ -85,7 +85,7 @@ ${message}`;
           "x-goog-api-key": apiKey,
         },
         body: JSON.stringify({
-          systemInstruction: {
+          system_instruction: {
             parts: [{ text: systemInstruction }],
           },
           contents: [
@@ -94,8 +94,8 @@ ${message}`;
               parts: [{ text: prompt }],
             },
           ],
-          generationConfig: {
-            maxOutputTokens: 500,
+          generation_config: {
+            max_output_tokens: 500,
           },
         }),
       },
@@ -104,10 +104,10 @@ ${message}`;
     const data = await response.json();
     if (!response.ok) {
       const code = typeof data?.error?.status === "string" ? data.error.status : "unknown";
-      const message = typeof data?.error?.message === "string" ? data.error.message : "";
-      console.error("NEXO Gemini error", response.status, code, message);
+      const providerMessage = typeof data?.error?.message === "string" ? data.error.message : "";
+      console.error("NEXO Gemini error", response.status, code, providerMessage);
       return res.status(502).json({
-        error: `O Gemini recusou a solicitação (${response.status}/${code}).`,
+        error: `O Gemini recusou a solicitação (${response.status}/${code}).${providerMessage ? ` ${providerMessage}` : ""}`,
         providerStatus: response.status,
         providerCode: code,
       });
