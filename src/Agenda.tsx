@@ -23,6 +23,10 @@ function Agenda() {
   const [showRecoveryNotice, setShowRecoveryNotice] = useState(initialPlannerState.missedMinutes > 0 && !initialPlannerState.recoveryActive);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [assistantAction, setAssistantAction] = useState<AssistantAction | null>(null);
+  const [assistantInput, setAssistantInput] = useState("");
+  const [assistantResponse, setAssistantResponse] = useState("");
+  const [assistantLoading, setAssistantLoading] = useState(false);
+  const [assistantError, setAssistantError] = useState("");
 
   const workload = useMemo(() => getWorkload(), [items]);
   const critical = useMemo(() => getCriticalDiscipline(workload), [workload]);
@@ -46,10 +50,7 @@ function Agenda() {
     if (pendingMinutes <= 0) return;
     const pendingIds = pendingItems.map((item) => item.id);
     const nextState = registerMissedDay({ missionIds: pendingIds, missedMinutes: pendingMinutes, priorityCode: critical?.code ?? null, priorityReason: critical?.reason ?? null });
-    setPlannerState(nextState);
-    setRecoveryMinutes(pendingMinutes);
-    setRecoveryMode(false);
-    setShowRecoveryNotice(true);
+    setPlannerState(nextState); setRecoveryMinutes(pendingMinutes); setRecoveryMode(false); setShowRecoveryNotice(true);
   }
 
   function startRecovery() {
@@ -57,33 +58,43 @@ function Agenda() {
     const missed = Math.max(15, state.missedMinutes || pendingMinutes);
     const nextPlan = replanAfterMissedDay(getWorkload(), missed, 90, 7);
     const accepted = acceptRecoveryPlan({ ...state, missedMinutes: missed });
-    setPlannerState(accepted);
-    setRecoveryMinutes(missed);
-    setRecoveryMode(true);
-    setItems(missionsToItems(nextPlan[0].missions));
-    setShowRecoveryNotice(false);
+    setPlannerState(accepted); setRecoveryMinutes(missed); setRecoveryMode(true); setItems(missionsToItems(nextPlan[0].missions)); setShowRecoveryNotice(false);
   }
 
   function openAssistant(action?: AssistantAction) {
-    setAssistantAction(action ?? null);
-    setAssistantOpen(true);
+    setAssistantAction(action ?? null); setAssistantOpen(true); setAssistantError("");
+    if (!assistantResponse && action) setAssistantInput(action === "late" ? "Fiquei atrasado. O que devo fazer agora?" : action === "doubt" ? "Não entendi a matéria e preciso destravar." : action === "explain" ? "Explique o conteúdo que devo estudar agora." : action === "summary" ? "Faça um resumo do conteúdo que devo estudar agora." : action === "flashcards" ? "Crie flashcards para eu revisar agora." : "Monte um mapa mental do conteúdo que devo estudar agora.");
+  }
+
+  async function askAssistant() {
+    const message = assistantInput.trim();
+    if (!message || assistantLoading) return;
+    setAssistantLoading(true); setAssistantError("");
+    try {
+      const response = await fetch("/api/nexo-assistant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message,
+          action: assistantAction,
+          context: {
+            priority: critical?.discipline ?? null,
+            priorityReason: critical?.reason ?? null,
+            pendingMinutes,
+            workload: workload.map((item) => ({ discipline: item.name, pendingLessons: item.pendingLessons, pendingExercises: item.pendingExercises, pendingAssignments: item.pendingAssignments, daysUntilExam: item.daysUntilExam }))
+          }
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.error || "Não foi possível responder agora.");
+      setAssistantResponse(data.answer);
+    } catch (error) {
+      setAssistantError(error instanceof Error ? error.message : "Não foi possível responder agora.");
+    } finally { setAssistantLoading(false); }
   }
 
   const assistantSubject = critical?.discipline ?? "seu plano acadêmico";
-  const assistantResponse = assistantAction === "late"
-    ? `Você tem ${pendingMinutes} min de missões ainda pendentes hoje. Não tente recuperar tudo de uma vez. O NEXO recomenda começar por ${assistantSubject}.`
-    : assistantAction === "doubt"
-      ? `Vamos começar pela sua maior prioridade: ${assistantSubject}. Diga qual conceito travou e o NEXO organiza uma explicação passo a passo.`
-      : assistantAction === "explain"
-        ? `Posso explicar ${assistantSubject} em linguagem simples, do básico ao nível da sua disciplina.`
-        : assistantAction === "summary"
-          ? `Posso transformar o conteúdo de ${assistantSubject} em um resumo curto, com os pontos que você realmente precisa dominar.`
-          : assistantAction === "flashcards"
-            ? `Posso criar flashcards de ${assistantSubject} para você revisar com recuperação ativa.`
-            : assistantAction === "mindmap"
-              ? `Posso organizar ${assistantSubject} em um mapa mental, conectando conceitos e relações principais.`
-              : `Estou acompanhando sua agenda. A prioridade atual é ${assistantSubject}. O que você precisa destravar?`;
 
-  return <div className="app"><header className="topbar"><div className="brand-area"><span className="brand">NEXO</span><span className="brand-subtitle">Assistente Acadêmico</span></div><nav className="desktop-nav"><a href="/">Hoje</a><a className="active" href="/agenda">Agenda</a><a href="/disciplinas">Disciplinas</a><a href="/progresso">Progresso</a></nav><div className="student"><div className="avatar">E</div><div className="student-info"><strong>Estudante</strong><span>Meu semestre</span></div></div></header><main className="main-content"><section className="welcome"><div><p className="eyebrow">PLANEJAMENTO ACADÊMICO</p><h1>Sua semana,<br />organizada.</h1><p className="welcome-text">O NEXO não abandona uma pendência. Quando o ritmo muda, ele recalcula o caminho.</p></div></section><section className="agenda-container">{showRecoveryNotice && <div className="recovery-banner"><span>↻</span><div><strong>Tudo bem. O NEXO recalculou.</strong><p>Você deixou <b>{plannerState.missedMinutes} min</b> para trás. A prioridade agora é <b>{plannerState.priorityCode ?? "a disciplina mais crítica"}</b>{plannerState.priorityReason ? ` — ${plannerState.priorityReason}` : "."}</p></div><button onClick={startRecovery}>Aceitar novo plano <span>→</span></button><button className="recovery-dismiss" onClick={() => setShowRecoveryNotice(false)}>Agora não</button></div>}{recoveryMode && <div className="planner-banner"><span>⚡</span><div><strong>Plano recalculado pelo NEXO</strong><p>{recoveryMinutes} min de pendências considerados. A carga extra foi limitada para evitar sobrecarga.</p></div></div>}<div className="agenda-header"><div><p className="eyebrow">TERÇA-FEIRA · 1 DE SETEMBRO</p><h2>Plano de hoje</h2></div><div className="agenda-summary"><strong>{completed}</strong><span>de {items.length} concluídas</span></div></div>{critical && <div className="planner-banner"><span>🧠</span><div><strong>Prioridade definida pelo NEXO: {critical.discipline}</strong><p>{critical.reason} O NEXO colocou essa disciplina na frente para reduzir o risco de acúmulo.</p></div></div>}<div className="agenda-timeline">{items.map((item, index) => { const isDone = item.status === "done"; const isNext = item.status === "next"; return <div className={`agenda-item ${isDone ? "done" : ""} ${isNext ? "next" : ""}`} key={item.id}><div className="agenda-time">{item.time}</div><div className="timeline-line"><span className="timeline-dot">{isDone ? "✓" : ""}</span>{index < items.length - 1 && <span className="timeline-connector" />}</div><article className="agenda-card"><div className="agenda-card-top"><div><span className="task-type">{item.type}</span><h3>{item.title}</h3><p>{item.subject}</p></div><span className="agenda-duration">⏱ {item.duration} min</span></div><div className="agenda-card-footer">{isNext && <span className="next-badge">PRÓXIMO</span>}{isDone && <span className="done-badge">✓ CONCLUÍDO</span>}{!isDone && <button className="agenda-complete" onClick={() => markDone(item.id)}>Marcar como concluído <span>→</span></button>}</div></article></div>; })}</div>{pendingMinutes > 0 && !recoveryMode && <div className="missed-day-card"><div><span className="task-type">SE O DIA NÃO SAIU COMO PLANEJADO</span><h3>Não consegui cumprir hoje</h3><p>Sem culpa. O NEXO registra o que ficou para trás e monta um novo caminho para você continuar.</p></div><button onClick={reportMissedDay}>Recalcular meu plano <span>→</span></button></div>}<div className="section-title" style={{ marginTop: "56px" }}><div><p className="eyebrow">PRÓXIMOS 7 DIAS</p><h2>O caminho que o NEXO montou.</h2></div></div><div className="week-plan-grid">{plan.slice(1).map((day) => <article className="week-day" key={day.date}><div><span className="task-type">{day.day}</span><strong>{day.date}</strong></div><b>{day.minutes} min</b><p>{day.missions.length ? `${day.missions.length} missão${day.missions.length > 1 ? "ões" : ""} planejada${day.missions.length > 1 ? "s" : ""}` : "Dia reservado para revisão"}</p>{day.missions.slice(0, 2).map((mission) => <span className="week-mission" key={mission.id}>{mission.subject} · {mission.type}</span>)}</article>)}</div></section></main><button className="assistant-button" onClick={() => openAssistant()}><span className="assistant-sparkle">✨</span><span>Preciso de ajuda</span></button>{assistantOpen && <div className="assistant-overlay" onClick={() => setAssistantOpen(false)}><aside className="assistant-panel" onClick={(event) => event.stopPropagation()}><div className="assistant-panel-header"><div><span className="assistant-kicker">✨ ASSISTENTE NEXO</span><h2>Vamos destravar isso.</h2><p>Estou olhando para seu plano atual e já sei qual é a prioridade.</p></div><button className="assistant-close" onClick={() => setAssistantOpen(false)}>×</button></div><div className="assistant-context"><span>PRIORIDADE ATUAL</span><strong>{assistantSubject}</strong><small>{critical?.reason ?? "Avance pelo próximo passo definido no seu plano."}</small></div><div className="assistant-response"><span>✨ NEXO</span><p>{assistantResponse}</p></div><div className="assistant-actions"><button onClick={() => openAssistant("explain")}>📖 Explicar conteúdo</button><button onClick={() => openAssistant("summary")}>📝 Resumir aula</button><button onClick={() => openAssistant("flashcards")}>🧠 Criar flashcards</button><button onClick={() => openAssistant("mindmap")}>🗺️ Mapa mental</button><button onClick={() => openAssistant("late")}>⏳ Estou atrasado</button><button onClick={() => openAssistant("doubt")}>❓ Não entendi a matéria</button></div><div className="assistant-input"><input placeholder="O que você precisa destravar?" onFocus={() => setAssistantAction("doubt")} /><button onClick={() => openAssistant("doubt")}>Enviar</button></div></aside></div>}</div>;
+  return <div className="app"><header className="topbar"><div className="brand-area"><span className="brand">NEXO</span><span className="brand-subtitle">Assistente Acadêmico</span></div><nav className="desktop-nav"><a href="/">Hoje</a><a className="active" href="/agenda">Agenda</a><a href="/disciplinas">Disciplinas</a><a href="/progresso">Progresso</a></nav><div className="student"><div className="avatar">E</div><div className="student-info"><strong>Estudante</strong><span>Meu semestre</span></div></div></header><main className="main-content"><section className="welcome"><div><p className="eyebrow">PLANEJAMENTO ACADÊMICO</p><h1>Sua semana,<br />organizada.</h1><p className="welcome-text">O NEXO não abandona uma pendência. Quando o ritmo muda, ele recalcula o caminho.</p></div></section><section className="agenda-container">{showRecoveryNotice && <div className="recovery-banner"><span>↻</span><div><strong>Tudo bem. O NEXO recalculou.</strong><p>Você deixou <b>{plannerState.missedMinutes} min</b> para trás. A prioridade agora é <b>{plannerState.priorityCode ?? "a disciplina mais crítica"}</b>{plannerState.priorityReason ? ` — ${plannerState.priorityReason}` : "."}</p></div><button onClick={startRecovery}>Aceitar novo plano <span>→</span></button><button className="recovery-dismiss" onClick={() => setShowRecoveryNotice(false)}>Agora não</button></div>}{recoveryMode && <div className="planner-banner"><span>⚡</span><div><strong>Plano recalculado pelo NEXO</strong><p>{recoveryMinutes} min de pendências considerados. A carga extra foi limitada para evitar sobrecarga.</p></div></div>}<div className="agenda-header"><div><p className="eyebrow">TERÇA-FEIRA · 1 DE SETEMBRO</p><h2>Plano de hoje</h2></div><div className="agenda-summary"><strong>{completed}</strong><span>de {items.length} concluídas</span></div></div>{critical && <div className="planner-banner"><span>🧠</span><div><strong>Prioridade definida pelo NEXO: {critical.discipline}</strong><p>{critical.reason} O NEXO colocou essa disciplina na frente para reduzir o risco de acúmulo.</p></div></div>}<div className="agenda-timeline">{items.map((item, index) => { const isDone = item.status === "done"; const isNext = item.status === "next"; return <div className={`agenda-item ${isDone ? "done" : ""} ${isNext ? "next" : ""}`} key={item.id}><div className="agenda-time">{item.time}</div><div className="timeline-line"><span className="timeline-dot">{isDone ? "✓" : ""}</span>{index < items.length - 1 && <span className="timeline-connector" />}</div><article className="agenda-card"><div className="agenda-card-top"><div><span className="task-type">{item.type}</span><h3>{item.title}</h3><p>{item.subject}</p></div><span className="agenda-duration">⏱ {item.duration} min</span></div><div className="agenda-card-footer">{isNext && <span className="next-badge">PRÓXIMO</span>}{isDone && <span className="done-badge">✓ CONCLUÍDO</span>}{!isDone && <button className="agenda-complete" onClick={() => markDone(item.id)}>Marcar como concluído <span>→</span></button>}</div></article></div>; })}</div>{pendingMinutes > 0 && !recoveryMode && <div className="missed-day-card"><div><span className="task-type">SE O DIA NÃO SAIU COMO PLANEJADO</span><h3>Não consegui cumprir hoje</h3><p>Sem culpa. O NEXO registra o que ficou para trás e monta um novo caminho para você continuar.</p></div><button onClick={reportMissedDay}>Recalcular meu plano <span>→</span></button></div>}<div className="section-title" style={{ marginTop: "56px" }}><div><p className="eyebrow">PRÓXIMOS 7 DIAS</p><h2>O caminho que o NEXO montou.</h2></div></div><div className="week-plan-grid">{plan.slice(1).map((day) => <article className="week-day" key={day.date}><div><span className="task-type">{day.day}</span><strong>{day.date}</strong></div><b>{day.minutes} min</b><p>{day.missions.length ? `${day.missions.length} missão${day.missions.length > 1 ? "ões" : ""} planejada${day.missions.length > 1 ? "s" : ""}` : "Dia reservado para revisão"}</p>{day.missions.slice(0, 2).map((mission) => <span className="week-mission" key={mission.id}>{mission.subject} · {mission.type}</span>)}</article>)}</div></section></main><button className="assistant-button" onClick={() => openAssistant()}><span className="assistant-sparkle">✨</span><span>Preciso de ajuda</span></button>{assistantOpen && <div className="assistant-overlay" onClick={() => setAssistantOpen(false)}><aside className="assistant-panel" onClick={(event) => event.stopPropagation()}><div className="assistant-panel-header"><div><span className="assistant-kicker">✨ ASSISTENTE NEXO</span><h2>Vamos destravar isso.</h2><p>Agora você pode conversar de verdade com o NEXO sobre seu estudo.</p></div><button className="assistant-close" onClick={() => setAssistantOpen(false)}>×</button></div><div className="assistant-context"><span>PRIORIDADE ATUAL</span><strong>{assistantSubject}</strong><small>{critical?.reason ?? "Avance pelo próximo passo definido no seu plano."}</small></div>{assistantResponse && <div className="assistant-response"><span>✨ NEXO</span><p>{assistantResponse}</p></div>}{assistantLoading && <div className="assistant-response"><span>✨ NEXO</span><p>Estou pensando no melhor próximo passo para você…</p></div>}{assistantError && <div className="assistant-response"><span>⚠️ NEXO</span><p>{assistantError}</p></div>}<div className="assistant-actions"><button onClick={() => openAssistant("explain")}>📖 Explicar conteúdo</button><button onClick={() => openAssistant("summary")}>📝 Resumir aula</button><button onClick={() => openAssistant("flashcards")}>🧠 Criar flashcards</button><button onClick={() => openAssistant("mindmap")}>🗺️ Mapa mental</button><button onClick={() => openAssistant("late")}>⏳ Estou atrasado</button><button onClick={() => openAssistant("doubt")}>❓ Não entendi a matéria</button></div><div className="assistant-input"><input value={assistantInput} onChange={(event) => setAssistantInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void askAssistant(); }} placeholder="O que você precisa destravar?" /><button disabled={assistantLoading || !assistantInput.trim()} onClick={() => void askAssistant()}>Enviar</button></div></aside></div>}</div>;
 }
 export default Agenda;
