@@ -16,14 +16,21 @@ type AssistantBody = {
 };
 
 function getOutputText(data: any): string {
-  const candidates = data?.candidates ?? [];
+  if (typeof data?.output_text === "string" && data.output_text.trim()) {
+    return data.output_text.trim();
+  }
+
   const parts: string[] = [];
-  for (const candidate of candidates) {
-    for (const part of candidate?.content?.parts ?? []) {
-      if (typeof part?.text === "string") parts.push(part.text);
+  for (const step of data?.steps ?? []) {
+    for (const content of step?.content ?? []) {
+      if (typeof content?.text === "string") parts.push(content.text);
     }
   }
   return parts.join("\n").trim();
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export default async function handler(req: any, res: any) {
@@ -44,8 +51,9 @@ export default async function handler(req: any, res: any) {
 
   const context = body.context ?? {};
   const workloadText = (context.workload ?? [])
-    .map((item) =>
-      `- ${item.discipline}: ${item.pendingLessons} aulas, ${item.pendingExercises} exercícios, ${item.pendingAssignments} trabalhos pendentes; prova em ${item.daysUntilExam} dias.`
+    .map(
+      (item) =>
+        `- ${item.discipline}: ${item.pendingLessons} aulas, ${item.pendingExercises} exercícios, ${item.pendingAssignments} trabalhos pendentes; prova em ${item.daysUntilExam} dias.`,
     )
     .join("\n");
 
@@ -75,50 +83,68 @@ ${workloadText || "- Não informada"}
 MENSAGEM DO ESTUDANTE:
 ${message}`;
 
+  const models = ["gemini-3.6-flash", "gemini-3.5-flash"];
+  let lastStatus = 503;
+  let lastCode = "service_unavailable";
+
   try {
-    const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": apiKey,
-        },
-        body: JSON.stringify({
-          systemInstruction: {
-            parts: [{ text: systemInstruction }],
-          },
-          contents: [
-            {
-              role: "user",
-              parts: [{ text: prompt }],
+    for (const model of models) {
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const response = await fetch(
+          "https://generativelanguage.googleapis.com/v1beta/interactions",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-goog-api-key": apiKey,
             },
-          ],
-          generationConfig: {
-            maxOutputTokens: 500,
-            temperature: 0.4,
+            body: JSON.stringify({
+              model,
+              system_instruction: systemInstruction,
+              input: prompt,
+              store: false,
+              generation_config: {
+                max_tokens: 500,
+                thinking_level: "low",
+              },
+            }),
           },
-        }),
-      },
-    );
+        );
 
-    const data = await response.json();
-    if (!response.ok) {
-      const code = typeof data?.error?.status === "string" ? data.error.status : "unknown";
-      console.error("NEXO Gemini error", response.status, code);
-      return res.status(502).json({
-        error: `O Gemini recusou a solicitação (${response.status}/${code}).`,
-        providerStatus: response.status,
-        providerCode: code,
-      });
+        const data = await response.json();
+        if (response.ok) {
+          const output = getOutputText(data);
+          if (output) return res.status(200).json({ answer: output });
+          return res.status(502).json({ error: "O Gemini não retornou uma resposta válida." });
+        }
+
+        lastStatus = response.status;
+        lastCode =
+          typeof data?.error?.code === "string"
+            ? data.error.code
+            : typeof data?.error?.status === "string"
+              ? data.error.status
+              : "unknown";
+
+        console.error("NEXO Gemini error", model, attempt + 1, response.status, lastCode);
+
+        if (response.status !== 503 && response.status !== 429) {
+          return res.status(502).json({
+            error: `O Gemini recusou a solicitação (${response.status}/${lastCode}).`,
+            providerStatus: response.status,
+            providerCode: lastCode,
+          });
+        }
+
+        if (attempt === 0) await sleep(1200);
+      }
     }
 
-    const output = getOutputText(data);
-    if (!output) {
-      return res.status(502).json({ error: "O Gemini não retornou uma resposta válida." });
-    }
-
-    return res.status(200).json({ answer: output });
+    return res.status(502).json({
+      error: `O Gemini está temporariamente indisponível (${lastStatus}/${lastCode}). Tente novamente em alguns segundos.`,
+      providerStatus: lastStatus,
+      providerCode: lastCode,
+    });
   } catch (error) {
     console.error("NEXO assistant error", error instanceof Error ? error.message : "unknown");
     return res.status(500).json({ error: "O assistente encontrou um problema temporário. Tente novamente." });
