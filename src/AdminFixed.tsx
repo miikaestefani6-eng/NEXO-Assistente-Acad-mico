@@ -1,28 +1,13 @@
 import { useMemo, useState, type CSSProperties } from "react";
 import { defaultAcademicState, loadAcademicState, saveAcademicState, type AcademicDiscipline } from "./lib/nexo/academicState";
+import { loadCmsActivities, saveCmsActivities, loadCmsEvents, toggleCmsActivityStep, type CmsActivity, type CmsEvent } from "./lib/nexo/cmsState";
 
-type ActivityType = "Aula da plataforma" | "Aula ao vivo" | "Exercício" | "Trabalho" | "Revisão";
-type ChecklistItem = { id: string; label: string; done: boolean };
-type Activity = { id: string; title: string; disciplineCode: string; type: ActivityType; dueDate: string; minutes: number; done: boolean; checklist: ChecklistItem[] };
-type EventItem = { id: string; title: string; date: string; time: string; disciplineCode: string; kind: "Aula ao vivo" | "Prova" | "Entrega" | "Outro" };
+type ActivityType = CmsActivity["type"];
+type ChecklistItem = CmsActivity["checklist"][number];
+type Activity = CmsActivity;
+type EventItem = CmsEvent;
 type EditableDiscipline = AcademicDiscipline & { examDate?: string };
 
-const ACTIVITY_KEY = "nexo-admin-activities";
-const EVENT_KEY = "nexo-admin-events";
-
-function read<T>(key: string, fallback: T): T {
-  try {
-    const value = window.localStorage.getItem(key);
-    if (!value) return fallback;
-    const parsed = JSON.parse(value);
-    return parsed ?? fallback;
-  } catch {
-    return fallback;
-  }
-}
-function write<T>(key: string, value: T) {
-  try { window.localStorage.setItem(key, JSON.stringify(value)); } catch { /* mantém a sessão utilizável */ }
-}
 function todayISO() { return new Date().toISOString().slice(0, 10); }
 function daysUntil(date: string) {
   if (!date) return 0;
@@ -43,34 +28,17 @@ function checklistFor(type: ActivityType): ChecklistItem[] {
   };
   return labels[type].map((label, index) => ({ id: `${type}-${index}`, label, done: false }));
 }
-function normalizeActivity(item: Partial<Activity>, disciplines: AcademicDiscipline[]): Activity {
-  const type: ActivityType = ["Aula da plataforma", "Aula ao vivo", "Exercício", "Trabalho", "Revisão"].includes(item.type as string) ? item.type as ActivityType : "Aula da plataforma";
-  const checklist = Array.isArray(item.checklist) && item.checklist.length ? item.checklist.map((x, i) => ({ id: x.id || `${type}-${i}`, label: x.label || "Etapa", done: Boolean(x.done) })) : checklistFor(type);
-  return {
-    id: item.id || `activity-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-    title: String(item.title || ""),
-    disciplineCode: item.disciplineCode || disciplines[0]?.code || "",
-    type,
-    dueDate: item.dueDate || todayISO(),
-    minutes: Math.max(5, Number(item.minutes) || 30),
-    done: Boolean(item.done),
-    checklist,
-  };
+function newActivity(disciplineCode = ""): Activity {
+  return { id: "", title: "", disciplineCode, type: "Aula da plataforma", dueDate: todayISO(), minutes: 30, done: false, checklist: checklistFor("Aula da plataforma") };
 }
 
 export default function AdminFixed() {
   const [tab, setTab] = useState<"overview" | "disciplines" | "activities" | "agenda">("overview");
   const [disciplines, setDisciplines] = useState<AcademicDiscipline[]>(() => loadAcademicState());
-  const [activities, setActivities] = useState<Activity[]>(() => {
-    const raw = read<Partial<Activity>[]>(ACTIVITY_KEY, []);
-    return Array.isArray(raw) ? raw.map((item) => normalizeActivity(item, loadAcademicState())) : [];
-  });
-  const [events, setEvents] = useState<EventItem[]>(() => {
-    const raw = read<EventItem[]>(EVENT_KEY, []);
-    return Array.isArray(raw) ? raw : [];
-  });
+  const [activities, setActivities] = useState<Activity[]>(() => loadCmsActivities());
+  const [events, setEvents] = useState<EventItem[]>(() => loadCmsEvents());
   const [editing, setEditing] = useState<EditableDiscipline | null>(null);
-  const [activity, setActivity] = useState<Activity>(() => normalizeActivity({ type: "Aula da plataforma" }, loadAcademicState()));
+  const [activity, setActivity] = useState<Activity>(() => newActivity(loadAcademicState()[0]?.code || ""));
   const [event, setEvent] = useState<EventItem>(() => ({ id: "", title: "", date: todayISO(), time: "19:00", disciplineCode: loadAcademicState()[0]?.code || "", kind: "Aula ao vivo" }));
   const [notice, setNotice] = useState("");
 
@@ -113,7 +81,7 @@ export default function AdminFixed() {
     const next = disciplines.filter((d) => d.code !== code);
     setDisciplines(next); saveAcademicState(next);
     const filtered = activities.filter((a) => a.disciplineCode !== code);
-    setActivities(filtered); write(ACTIVITY_KEY, filtered);
+    setActivities(filtered); saveCmsActivities(filtered);
     flash("Disciplina removida.");
   }
 
@@ -127,25 +95,25 @@ export default function AdminFixed() {
     if (!title) return flash("Informe o título da atividade.");
     if (!disciplineCode) return flash("Cadastre uma disciplina antes de adicionar atividades.");
     if (!activity.dueDate) return flash("Informe o prazo da atividade.");
-    const item: Activity = normalizeActivity({ ...activity, title, disciplineCode, minutes: Number(activity.minutes) }, disciplines);
-    const next = activity.id ? activities.map((a) => a.id === item.id ? item : a) : [...activities, item];
-    setActivities(next); write(ACTIVITY_KEY, next);
-    setActivity(normalizeActivity({ type: "Aula da plataforma", disciplineCode }, disciplines));
-    flash("Atividade salva com sucesso.");
+    const item: Activity = { ...activity, title, disciplineCode, minutes: Math.max(5, Number(activity.minutes) || 30) };
+    const exists = item.id !== "" && activities.some((a) => a.id === item.id);
+    const next = exists
+      ? activities.map((a) => a.id === item.id ? item : a)
+      : [...activities, { ...item, id: `activity-${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }];
+    setActivities(next); saveCmsActivities(next);
+    setActivity(newActivity(disciplineCode));
+    flash(exists ? "Atividade atualizada com sucesso." : "Atividade salva com sucesso.");
   }
 
   function toggleChecklist(activityId: string, itemId: string) {
-    const next = activities.map((a) => {
-      if (a.id !== activityId) return a;
-      const checklist = a.checklist.map((item) => item.id === itemId ? { ...item, done: !item.done } : item);
-      return { ...a, checklist, done: checklist.every((item) => item.done) };
-    });
-    setActivities(next); write(ACTIVITY_KEY, next);
+    const next = toggleCmsActivityStep(activityId, itemId);
+    setActivities(next);
+    setDisciplines(loadAcademicState());
   }
 
   function deleteActivity(id: string) {
     const next = activities.filter((a) => a.id !== id);
-    setActivities(next); write(ACTIVITY_KEY, next); flash("Atividade removida.");
+    setActivities(next); saveCmsActivities(next); flash("Atividade removida.");
   }
 
   function saveEvent() {
@@ -153,7 +121,8 @@ export default function AdminFixed() {
     const item: EventItem = { ...event, id: event.id || `event-${Date.now()}`, title: event.title.trim() };
     const next = event.id ? events.map((e) => e.id === item.id ? item : e) : [...events, item];
     next.sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
-    setEvents(next); write(EVENT_KEY, next);
+    setEvents(next);
+    try { window.localStorage.setItem("nexo-admin-events", JSON.stringify(next)); } catch { /* mantém o fluxo utilizável */ }
     setEvent({ id: "", title: "", date: todayISO(), time: "19:00", disciplineCode: disciplines[0]?.code || "", kind: "Aula ao vivo" });
     flash("Evento salvo na agenda.");
   }
@@ -161,9 +130,10 @@ export default function AdminFixed() {
   function resetDemo() {
     if (!window.confirm("Voltar aos dados iniciais? Isso substitui as alterações feitas neste navegador.")) return;
     setDisciplines(defaultAcademicState); saveAcademicState(defaultAcademicState);
-    setActivities([]); write(ACTIVITY_KEY, []);
-    setEvents([]); write(EVENT_KEY, []);
-    setActivity(normalizeActivity({ type: "Aula da plataforma", disciplineCode: defaultAcademicState[0]?.code }, defaultAcademicState));
+    setActivities([]); saveCmsActivities([]);
+    setEvents([]);
+    try { window.localStorage.setItem("nexo-admin-events", JSON.stringify([])); } catch { /* mantém o fluxo utilizável */ }
+    setActivity(newActivity(defaultAcademicState[0]?.code || ""));
     flash("Dados iniciais restaurados.");
   }
 
@@ -209,7 +179,7 @@ export default function AdminFixed() {
               {field("Prazo", activity.dueDate, (v) => setActivity({ ...activity, dueDate: v }), "date")}{field("Minutos", activity.minutes, (v) => setActivity({ ...activity, minutes: Number(v) }), "number")}
             </div>
             <div style={checklistBox}><div><p className="eyebrow">CHECKLIST AUTOMÁTICO</p><h3 style={h3}>{activity.type}</h3><p style={paragraph}>O NEXO já cria as etapas certas para esse tipo de atividade.</p></div><div style={{ display: "grid", gap: 8 }}>{activity.checklist.map((item) => <label key={item.id} style={checkItem}><input type="checkbox" checked={item.done} onChange={() => setActivity({ ...activity, checklist: activity.checklist.map((x) => x.id === item.id ? { ...x, done: !x.done } : x) })} /><span>{item.label}</span></label>)}</div></div>
-            <button style={primaryButton} onClick={saveActivity}>{activity.id ? "Atualizar atividade" : "Cadastrar atividade"}</button>
+            <button style={primaryButton} onClick={saveActivity}>{activity.id && activities.some((a) => a.id === activity.id) ? "Atualizar atividade" : "Cadastrar atividade"}</button>
           </div>
           {activities.length === 0 ? <Empty text="Nenhuma atividade cadastrada ainda." /> : activities.map((a) => <article key={a.id} style={listCard}><div style={{ flex: 1 }}><span className="task-type">{a.type} · {a.dueDate}</span><h3 style={h3}>{a.title}</h3><p style={paragraph}>{disciplines.find((d) => d.code === a.disciplineCode)?.name ?? a.disciplineCode} · {a.minutes} min</p><div style={miniChecklist}>{a.checklist.map((item) => <label key={item.id} style={checkItem}><input type="checkbox" checked={item.done} onChange={() => toggleChecklist(a.id, item.id)} /><span style={{ textDecoration: item.done ? "line-through" : "none", opacity: item.done ? 0.6 : 1 }}>{item.label}</span></label>)}</div></div><div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}><button style={ghostButton} onClick={() => setActivity(a)}>Editar</button><button style={deleteButton} onClick={() => deleteActivity(a.id)}>Excluir</button></div></article>)}
         </section>}
@@ -217,7 +187,7 @@ export default function AdminFixed() {
         {tab === "agenda" && <section>
           <div style={sectionHeader}><div><p className="eyebrow">COMPROMISSOS</p><h2 style={h2}>Agenda do semestre</h2><p style={paragraph}>Aulas ao vivo entram aqui como compromissos de horário.</p></div></div>
           <div style={formCard}><div style={formGrid}>{field("Título", event.title, (v) => setEvent({ ...event, title: v }))}{field("Data", event.date, (v) => setEvent({ ...event, date: v }), "date")}{field("Horário", event.time, (v) => setEvent({ ...event, time: v }), "time")}<label style={labelStyle}><span>Disciplina</span><select value={event.disciplineCode} onChange={(e) => setEvent({ ...event, disciplineCode: e.target.value })} style={inputStyle}><option value="">Geral</option>{disciplines.map((d) => <option key={d.code} value={d.code}>{d.name}</option>)}</select></label><label style={labelStyle}><span>Tipo</span><select value={event.kind} onChange={(e) => setEvent({ ...event, kind: e.target.value as EventItem["kind"] })} style={inputStyle}><option>Aula ao vivo</option><option>Prova</option><option>Entrega</option><option>Outro</option></select></label></div><button style={primaryButton} onClick={saveEvent}>{event.id ? "Atualizar evento" : "Adicionar à agenda"}</button></div>
-          {events.length === 0 ? <Empty text="Nenhum evento cadastrado ainda." /> : events.map((e) => <article key={e.id} style={listCard}><div><span className="task-type">{e.kind} · {e.date} · {e.time}</span><h3 style={h3}>{e.title}</h3><p style={paragraph}>{disciplines.find((d) => d.code === e.disciplineCode)?.name ?? "Geral"}</p></div><div style={{ display: "flex", gap: 8 }}><button style={ghostButton} onClick={() => setEvent(e)}>Editar</button><button style={deleteButton} onClick={() => { const next = events.filter((x) => x.id !== e.id); setEvents(next); write(EVENT_KEY, next); flash("Evento removido."); }}>Excluir</button></div></article>)}
+          {events.length === 0 ? <Empty text="Nenhum evento cadastrado ainda." /> : events.map((e) => <article key={e.id} style={listCard}><div><span className="task-type">{e.kind} · {e.date} · {e.time}</span><h3 style={h3}>{e.title}</h3><p style={paragraph}>{disciplines.find((d) => d.code === e.disciplineCode)?.name ?? "Geral"}</p></div><div style={{ display: "flex", gap: 8 }}><button style={ghostButton} onClick={() => setEvent(e)}>Editar</button><button style={deleteButton} onClick={() => { const next = events.filter((x) => x.id !== e.id); setEvents(next); try { window.localStorage.setItem("nexo-admin-events", JSON.stringify(next)); } catch { /* mantém o fluxo utilizável */ } flash("Evento removido."); }}>Excluir</button></div></article>)}
         </section>}
       </main>
     </div>
