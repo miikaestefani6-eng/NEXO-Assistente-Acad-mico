@@ -3,6 +3,7 @@ type AssistantBody = {
   action?: string | null;
   file?: { name: string; mimeType: string; data: string } | null;
   context?: {
+    learningGaps?: Array<{ discipline: string; topic: string; note: string; occurrences: number }>;
     priority?: string | null;
     priorityReason?: string | null;
     pendingMinutes?: number;
@@ -116,6 +117,8 @@ export default async function handler(req: any, res: any) {
     )
     .join("\n");
 
+  const gapsText = (context.learningGaps ?? []).map((gap) => `- ${gap.discipline} / ${gap.topic}: ${gap.note} (${gap.occurrences} ocorrência(s))`).join("\n");
+
   const systemInstruction = `Você é o NEXO, um assistente estudantil que acompanha pessoas em diferentes jornadas de aprendizagem: faculdade, concurso, ENEM/vestibular, escola, certificações e outros objetivos de estudo.
 
 Sua função é ajudar o estudante a decidir o próximo passo, reduzir sobrecarga e transformar confusão em ação concreta. Você não é o professor da disciplina. Seja acolhedor, direto e prático. Nunca humilhe o estudante por atraso ou erro. Não invente informações sobre conteúdos que não foram fornecidos. Quando faltar conteúdo específico, peça o trecho, tema ou dúvida necessária.
@@ -131,6 +134,7 @@ Regras de resposta:
 - Para mapa mental, use uma hierarquia textual simples.
 - Para dúvidas, identifique primeiro onde está o bloqueio.
 - Não dê respostas acadêmicas inventadas ou cite fontes inexistentes.
+- Ao final, quando a conversa revelar uma dificuldade concreta que deve ser lembrada, inclua uma única linha invisível ao texto principal no formato [[NEXO_GAP:{"discipline":"nome","topic":"tópico específico","note":"descrição curta","strength":1}]]. Use strength de 1 (muita dificuldade) a 5 (domínio bom). Não gere essa marcação para perguntas genéricas, resumos ou pedidos sem evidência de dificuldade.
 - Quando houver um material anexado, use-o como fonte principal para explicar, resumir, criar flashcards, mapa mental ou responder dúvidas. Diferencie claramente o que está no material de conhecimento geral quando necessário.`;
 
   const prompt = `AÇÃO SOLICITADA: ${body.action ?? "conversa"}
