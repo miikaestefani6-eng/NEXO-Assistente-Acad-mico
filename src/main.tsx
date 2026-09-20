@@ -6,6 +6,7 @@ import Agenda from "./Agenda";
 import Disciplinas from "./Disciplinas";
 import Progresso from "./Progresso";
 import Onboarding from "./Onboarding";
+import Auth from "./Auth";
 import "./styles.css";
 import "./nexo-enhancements.css";
 
@@ -13,6 +14,7 @@ function Router() {
   const [path, setPath] = React.useState(window.location.pathname);
   React.useEffect(() => { const handlePopState = () => setPath(window.location.pathname); window.addEventListener("popstate", handlePopState); return () => window.removeEventListener("popstate", handlePopState); }, []);
   React.useEffect(() => { const handleInternalNavigation = (event: MouseEvent) => { const target = event.target as HTMLElement | null; const link = target?.closest("a[href]") as HTMLAnchorElement | null; if (!link) return; const href = link.getAttribute("href"); if (!href || !href.startsWith("/") || href.startsWith("//")) return; event.preventDefault(); window.history.pushState({}, "", href); setPath(href); window.scrollTo({ top: 0, behavior: "smooth" }); }; document.addEventListener("click", handleInternalNavigation); return () => document.removeEventListener("click", handleInternalNavigation); }, []);
+  if (path === "/entrar") return <Auth />;
   if (path === "/comecar") return <Onboarding />;
   if (path === "/admin") return <Admin />;
   if (path === "/agenda") return <Agenda />;
