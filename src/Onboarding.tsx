@@ -29,6 +29,7 @@ export default function Onboarding() {
   const [intake, setIntake] = useState<IntakeResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   function saveProfile() {
@@ -51,10 +52,12 @@ export default function Onboarding() {
   }
 
   async function confirm() {
-    if (!intake) return;
+    if (!intake || saving) return;
+    setSaving(true); setError("");
     saveProfile();
     applyIntake(intake);
-    await markOnboardingCompleted();
+    const saved = await markOnboardingCompleted();
+    if (!saved) { setError("Organizei seus dados neste dispositivo, mas não consegui confirmar a sincronização com sua conta. Verifique sua conexão e tente novamente."); setSaving(false); return; }
     window.localStorage.setItem("nexo-onboarding-complete", "true");
     window.location.href = "/";
   }
@@ -69,7 +72,7 @@ export default function Onboarding() {
       <section><span>DATAS E COMPROMISSOS</span>{intake.events?.length ? intake.events.map((e, i) => <div className="intake-row" key={i}><strong>{e.title}</strong><small>{e.date}{e.time ? ` · ${e.time}` : ""}</small></div>) : <p>Nenhuma data identificada com segurança.</p>}</section>
       {!!intake.missing?.length && <section><span>AINDA PRECISO SABER</span>{intake.missing.map((m) => <p key={m}>• {m}</p>)}</section>}
     </div>
-    <div className="intake-actions"><button className="onboarding-skip" onClick={() => setIntake(null)}>← Quero corrigir</button><button className="onboarding-continue" onClick={confirm}>Está certo. Organizar meu caminho <span>→</span></button></div>
+    {error && <p className="onboarding-error">{error}</p>}<div className="intake-actions"><button className="onboarding-skip" disabled={saving} onClick={() => setIntake(null)}>← Quero corrigir</button><button className="onboarding-continue" disabled={saving} onClick={confirm}>{saving ? "Salvando seu caminho..." : "Está certo. Organizar meu caminho"} <span>→</span></button></div>
   </main></div>;
 
   return <div className="onboarding-shell"><main className="onboarding-card">
