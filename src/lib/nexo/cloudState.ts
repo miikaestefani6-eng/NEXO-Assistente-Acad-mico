@@ -65,7 +65,7 @@ export async function uploadStudyMaterial(file: File, discipline="Não classific
   return {id:data.id,path,discipline};
 }
 
-export async function hydrateFromCloud() {
+export async function hydrateFromCloud(skipAreas: string[] = []) {
   if (!supabase || typeof window === "undefined") return false;
   const userId = await currentUserId(); if (!userId) return false;
   const [profileResult, subjectsResult, gapsResult, materialsResult, eventsResult, activitiesResult] = await Promise.all([
@@ -76,23 +76,23 @@ export async function hydrateFromCloud() {
     supabase.from("study_events").select("*,study_subjects(code)").eq("user_id",userId).order("event_date"),
     supabase.from("study_activities").select("*,study_subjects(code)").eq("user_id",userId).order("created_at"),
   ]);
-  if (profileResult.data) {
+  if (profileResult.data && !skipAreas.includes("profile")) {
     const p=profileResult.data;
     window.localStorage.setItem("nexo-study-profile", JSON.stringify({journeyType:p.journey_type||"faculdade",objective:p.objective||"Organizar meus estudos",targetDate:p.target_date||undefined,availableMinutesPerDay:p.available_minutes_per_day||90,preferredStudyDays:p.preferred_study_days||[1,2,3,4,5]}));
   }
-  if (subjectsResult.data?.length) {
+  if (subjectsResult.data?.length && !skipAreas.includes("subjects")) {
     const subjects=subjectsResult.data.map((s:any)=>({code:s.code||String(s.id).slice(0,8).toUpperCase(),name:s.name,lessons:s.lessons,lessonsDone:s.lessons_done,exercises:s.exercises,exercisesDone:s.exercises_done,assignments:s.assignments,assignmentsDone:s.assignments_done,exam:s.exam_date?new Date(s.exam_date+"T12:00:00").toLocaleDateString("pt-BR",{day:"2-digit",month:"short"}).toUpperCase().replace(".",""):"A DEFINIR",daysUntilExam:s.exam_date?Math.max(0,Math.ceil((new Date(s.exam_date+"T12:00:00").getTime()-Date.now())/86400000)):30,examDate:s.exam_date||undefined,scheduleKnown:Boolean(s.schedule_known)}));
     window.localStorage.setItem("nexo-academic-state", JSON.stringify(subjects));
   }
-  if (gapsResult.data?.length) {
+  if (gapsResult.data?.length && !skipAreas.includes("learning")) {
     const gaps=gapsResult.data.map((g:any)=>({id:g.id,discipline:g.discipline_name,topic:g.topic,note:g.note||"",strength:g.strength,occurrences:g.occurrences,lastSeen:g.last_seen,nextReview:g.next_review,resolved:g.resolved}));
     window.localStorage.setItem("nexo-learning-gaps", JSON.stringify(gaps));
   }
-  if (eventsResult.data?.length) {
+  if (eventsResult.data?.length && !skipAreas.includes("events")) {
     const events=eventsResult.data.map((e:any)=>({id:e.id,title:e.title,date:e.event_date,time:e.event_time||"",disciplineCode:e.study_subjects?.code||"",kind:e.kind||"Outro"}));
     window.localStorage.setItem("nexo-admin-events",JSON.stringify(events));
   }
-  if (activitiesResult.data?.length) {
+  if (activitiesResult.data?.length && !skipAreas.includes("activities")) {
     const activities=activitiesResult.data.map((a:any)=>({id:a.client_id,title:a.title,disciplineCode:a.study_subjects?.code||"",type:a.activity_type,dueDate:a.due_date||"",minutes:a.minutes,done:a.done,checklist:Array.isArray(a.checklist)?a.checklist:[]}));
     window.localStorage.setItem("nexo-admin-activities",JSON.stringify(activities));
   }
