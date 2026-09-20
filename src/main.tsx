@@ -44,6 +44,7 @@ function Router() {
   if (path === "/entrar") return <Auth />;
   if (supabaseConfigured && !signedIn) return <Auth />;
   if (signedIn && !onboardingDone && path !== "/comecar") { window.history.replaceState({}, "", "/comecar"); return <Onboarding />; }
+  if (signedIn && onboardingDone && path === "/comecar") { window.history.replaceState({}, "", "/"); return <App />; }
   if (path === "/comecar") return <Onboarding />;
   if (path === "/admin") { window.history.replaceState({}, "", "/"); return <App />; }
   if (path === "/agenda") return <Agenda />;
