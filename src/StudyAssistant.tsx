@@ -8,9 +8,9 @@ import { uploadStudyMaterial } from "./lib/nexo/cloudState";
 type AssistantAction = "explain" | "summary" | "flashcards" | "mindmap" | "late" | "doubt";
 
 function workload() {
-  return loadAcademicState().map(({ code, name, lessons, lessonsDone, exercises, exercisesDone, assignments, assignmentsDone, daysUntilExam }) => ({
+  return loadAcademicState().map(({ code, name, lessons, lessonsDone, exercises, exercisesDone, assignments, assignmentsDone, daysUntilExam, examDate }) => ({
     code, name, pendingLessons: lessons-lessonsDone, pendingExercises: exercises-exercisesDone,
-    pendingAssignments: assignments-assignmentsDone, daysUntilExam
+    pendingAssignments: assignments-assignmentsDone, daysUntilExam, deadlineKnown: Boolean(examDate)
   }));
 }
 function fileToBase64(file: File) {
