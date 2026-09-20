@@ -51,7 +51,7 @@ export default function StudyAssistant({ open, onClose }: { open:boolean; onClos
         message, action, file:filePayload,
         context:{priority:critical?.discipline??null,priorityReason:critical?.reason??null,pendingMinutes,
           learningGaps:activeLearningGaps().map(g=>({discipline:g.discipline,topic:g.topic,note:g.note,occurrences:g.occurrences})),
-          workload:work.map(i=>({discipline:i.name,pendingLessons:i.pendingLessons,pendingExercises:i.pendingExercises,pendingAssignments:i.pendingAssignments,daysUntilExam:i.daysUntilExam}))}
+          workload:work.map(i=>({discipline:i.name,pendingLessons:i.pendingLessons,pendingExercises:i.pendingExercises,pendingAssignments:i.pendingAssignments,deadlineKnown:i.deadlineKnown,daysUntilExam:i.deadlineKnown?i.daysUntilExam:null}))}
       })});
       const data=await response.json(); if(!response.ok) throw new Error(data?.error||"Não foi possível responder agora.");
       const raw=String(data.answer||""); const gap=raw.match(/\[\[NEXO_GAP:(\{.*?\})\]\]/s);
