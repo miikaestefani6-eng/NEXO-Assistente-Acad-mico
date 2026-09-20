@@ -177,3 +177,7 @@
 @media(max-width:760px){.auth-page{grid-template-columns:1fr}.auth-brand{padding:48px 26px}.auth-brand .eyebrow{margin-top:30px}.auth-brand h1{font-size:38px}.auth-card{margin:32px auto 48px}}
 
 .nexo-boot{min-height:100vh;display:grid;place-items:center;background:var(--cream);color:var(--deep);font:700 13px "DM Sans",sans-serif;letter-spacing:.02em}
+
+
+/* Account */
+.account-menu{position:relative}.account-trigger{border:0;background:transparent;cursor:pointer;text-align:left}.account-chevron{margin-left:4px;color:var(--muted);font-size:12px}.account-popover{position:absolute;right:0;top:calc(100% + 10px);z-index:80;width:190px;padding:12px;border:1px solid var(--border);border-radius:14px;background:white;box-shadow:0 16px 40px rgba(23,59,58,.12)}.account-popover div{padding:5px 7px 10px}.account-popover strong,.account-popover span{display:block}.account-popover strong{color:var(--deep);font-size:12px}.account-popover span{margin-top:3px;color:var(--muted);font-size:9px}.account-popover button{width:100%;border:0;border-radius:9px;padding:10px;background:var(--cream);color:var(--deep);font-size:10px;font-weight:700;text-align:left}.account-popover button:hover{background:var(--coral-light);color:var(--coral)}
