@@ -1,3 +1,4 @@
+import { syncSubjects } from "./cloudState";
 export type AcademicDiscipline = { code: string; name: string; lessons: number; lessonsDone: number; exercises: number; exercisesDone: number; assignments: number; assignmentsDone: number; exam: string; daysUntilExam: number };
 
 const STORAGE_KEY = "nexo-academic-state";
@@ -15,6 +16,7 @@ export function loadAcademicState(): AcademicDiscipline[] {
 
 export function saveAcademicState(state: AcademicDiscipline[]) {
   if (typeof window !== "undefined") window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  void syncSubjects(state);
 }
 
 export function applyMissionCompletion(state: AcademicDiscipline[], missionId: string) {
