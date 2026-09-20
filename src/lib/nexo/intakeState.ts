@@ -1,5 +1,6 @@
 import { saveAcademicState, type AcademicDiscipline } from "./academicState";
 import { loadCmsEvents, saveCmsEvents, type CmsEvent } from "./cmsState";
+import { syncStudyEvents, syncSubjects } from "./cloudState";
 
 export type IntakeSubject = { name: string; lessons?: number; exercises?: number; assignments?: number; examDate?: string; classDays?: string[] };
 export type IntakeResult = { summary: string; subjects: IntakeSubject[]; events: Array<{ title: string; date: string; time?: string; kind: CmsEvent["kind"]; subject?: string }>; targetDate?: string; missing?: string[]; confidence?: "alta" | "media" | "baixa" };
@@ -21,7 +22,7 @@ function examLabel(date?: string) {
   return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }).replace(".", "").toUpperCase();
 }
 
-export function applyIntake(result: IntakeResult) {
+export async function applyIntake(result: IntakeResult) {
   const disciplines: AcademicDiscipline[] = (result.subjects ?? []).map((subject, index) => ({
     code: codeFor(subject.name, index), name: subject.name,
     lessons: Math.max(0, Number(subject.lessons) || 0), lessonsDone: 0,
@@ -31,6 +32,7 @@ export function applyIntake(result: IntakeResult) {
     scheduleKnown: [subject.lessons, subject.exercises, subject.assignments].some((value) => Number(value) > 0),
   }));
   if (disciplines.length) saveAcademicState(disciplines);
+  const subjectsSaved = disciplines.length ? await syncSubjects(disciplines) : true;
   const codeByName = new Map(disciplines.map((d) => [d.name.toLowerCase(), d.code]));
   const existing = loadCmsEvents();
   const generated: CmsEvent[] = (result.events ?? []).filter((e) => e.date).map((event, index) => ({
@@ -38,5 +40,8 @@ export function applyIntake(result: IntakeResult) {
     date: event.date, time: event.time || "", kind: event.kind || "Outro",
     disciplineCode: event.subject ? (codeByName.get(event.subject.toLowerCase()) || "") : "",
   }));
-  if (generated.length) saveCmsEvents([...existing, ...generated]);
+  const allEvents = generated.length ? [...existing, ...generated] : existing;
+  if (generated.length) saveCmsEvents(allEvents);
+  const eventsSaved = await syncStudyEvents(allEvents);
+  return subjectsSaved && eventsSaved;
 }
