@@ -18,7 +18,9 @@ export async function syncProfile(profile: CloudStudyProfile) {
 export async function syncSubjects(subjects: CloudDiscipline[]) {
   if (!supabase) return false; const userId=await currentUserId(); if(!userId) return false;
   const rows=subjects.map(s=>({user_id:userId,code:s.code,name:s.name,lessons:s.lessons,lessons_done:s.lessonsDone,exercises:s.exercises,exercises_done:s.exercisesDone,assignments:s.assignments,assignments_done:s.assignmentsDone,exam_date:s.examDate||null,schedule_known:Boolean(s.scheduleKnown)}));
-  if(!rows.length) return true; const {error}=await supabase.from("study_subjects").upsert(rows,{onConflict:"user_id,code"}); return !error;
+  if(!rows.length){const {error}=await supabase.from("study_subjects").delete().eq("user_id",userId);return !error;}
+  const {error}=await supabase.from("study_subjects").upsert(rows,{onConflict:"user_id,code"}); if(error)return false;
+  const keepCodes=rows.map(row=>row.code); const {error:cleanup}=await supabase.from("study_subjects").delete().eq("user_id",userId).not("code","in",`(${keepCodes.map(code=>`"${String(code).replace(/"/g,'\\"')}"`).join(",")})`); return !cleanup;
 }
 
 export async function fetchSubjects(): Promise<CloudDiscipline[] | null> {
@@ -41,7 +43,8 @@ export async function syncStudyActivities(activities: CloudActivity[]) {
   const byCode=new Map((subjects||[]).map((s:any)=>[s.code,s.id]));
   if(!activities.length){const {error}=await supabase.from("study_activities").delete().eq("user_id",userId);return !error;}
   const rows=activities.map(a=>({user_id:userId,subject_id:byCode.get(a.disciplineCode)||null,client_id:a.id,title:a.title,activity_type:a.type,due_date:a.dueDate||null,minutes:a.minutes,done:a.done,checklist:a.checklist,updated_at:new Date().toISOString()}));
-  const {error}=await supabase.from("study_activities").upsert(rows,{onConflict:"user_id,client_id"}); return !error;
+  const {error}=await supabase.from("study_activities").upsert(rows,{onConflict:"user_id,client_id"}); if(error)return false;
+  const keepIds=rows.map(row=>row.client_id); const {error:cleanup}=await supabase.from("study_activities").delete().eq("user_id",userId).not("client_id","in",`(${keepIds.map(id=>`"${String(id).replace(/"/g,'\\"')}"`).join(",")})`); return !cleanup;
 }
 
 type CloudEvent = { id:string; title:string; date:string; time:string; disciplineCode:string; kind:"Aula ao vivo"|"Prova"|"Entrega"|"Outro" };
