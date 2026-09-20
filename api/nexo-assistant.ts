@@ -12,7 +12,8 @@ type AssistantBody = {
       pendingLessons: number;
       pendingExercises: number;
       pendingAssignments: number;
-      daysUntilExam: number;
+      daysUntilExam: number | null;
+      deadlineKnown?: boolean;
     }>;
   };
 };
@@ -113,7 +114,7 @@ export default async function handler(req: any, res: any) {
   const context = body.context ?? {};
   const workloadText = (context.workload ?? [])
     .map((item) =>
-      `- ${item.discipline}: ${item.pendingLessons} aulas, ${item.pendingExercises} exercícios, ${item.pendingAssignments} trabalhos pendentes; prova em ${item.daysUntilExam} dias.`
+      `- ${item.discipline}: ${item.pendingLessons} aulas, ${item.pendingExercises} exercícios, ${item.pendingAssignments} trabalhos pendentes; ${item.deadlineKnown && item.daysUntilExam != null ? `avaliação em ${item.daysUntilExam} dias` : "data de avaliação não informada"}.`
     )
     .join("\n");
 
@@ -134,6 +135,7 @@ Regras de resposta:
 - Para mapa mental, use uma hierarquia textual simples.
 - Para dúvidas, identifique primeiro onde está o bloqueio.
 - Não dê respostas acadêmicas inventadas ou cite fontes inexistentes.
+- Nunca invente prazo ou urgência. Quando a data de avaliação não estiver informada, trate o prazo como desconhecido e organize apenas as pendências conhecidas.
 - Ao final, quando a conversa revelar uma dificuldade concreta que deve ser lembrada, inclua uma única linha invisível ao texto principal no formato [[NEXO_GAP:{"discipline":"nome","topic":"tópico específico","note":"descrição curta","strength":1}]]. Use strength de 1 (muita dificuldade) a 5 (domínio bom). Não gere essa marcação para perguntas genéricas, resumos ou pedidos sem evidência de dificuldade.
 - Quando houver um material anexado, use-o como fonte principal para explicar, resumir, criar flashcards, mapa mental ou responder dúvidas. Diferencie claramente o que está no material de conhecimento geral quando necessário.`;
 
