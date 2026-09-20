@@ -59,12 +59,6 @@ export default function Onboarding() {
     window.location.href = "/";
   }
 
-  async function demo() {
-    saveProfile();
-    await markOnboardingCompleted();
-    window.localStorage.setItem("nexo-onboarding-complete", "true");
-    window.location.href = "/";
-  }
 
   if (intake) return <div className="onboarding-shell"><main className="onboarding-card">
     <div className="onboarding-brand"><strong>NEXO</strong><span>Assistente Estudantil</span></div>
@@ -89,6 +83,5 @@ export default function Onboarding() {
     <button className={file ? "onboarding-import has-file" : "onboarding-import"} onClick={() => inputRef.current?.click()}><div><strong>{file ? file.name : "Anexar calendário, cronograma ou edital"}</strong><p>{file ? "O NEXO vai ler este documento junto com o que você contou." : "PDF ou imagem. O NEXO interpreta matérias, datas e compromissos antes de pedir sua confirmação."}</p></div><span>{file ? "✓" : "📎"}</span></button>
     {error && <p className="onboarding-error">{error}</p>}
     <button className="onboarding-continue" onClick={analyze} disabled={loading}>{loading ? "NEXO está organizando..." : "Deixar o NEXO organizar"} <span>→</span></button>
-    <button className="onboarding-skip" onClick={demo}>Usar a demonstração atual por enquanto</button>
   </main></div>;
 }
