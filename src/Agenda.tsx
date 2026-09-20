@@ -39,6 +39,52 @@ function Agenda() {
   const [reviewCheck, setReviewCheck] = useState<AgendaItem | null>(null);
 
 
+  const workload = useMemo(() => getWorkload(), [items]);
+  const critical = useMemo(() => getCriticalDiscipline(workload), [workload]);
+  const plan = useMemo(() => recoveryMode ? replanAfterMissedDay(workload, recoveryMinutes, availableMinutes, 7) : generateAdaptivePlan(workload, availableMinutes, 7), [recoveryMode, recoveryMinutes, workload, availableMinutes]);
+  const completed = items.filter((item) => item.status === "done").length;
+  const pendingItems = items.filter((item) => item.status !== "done" && item.source !== "event");
+  const pendingMinutes = pendingItems.reduce((sum, item) => sum + item.duration, 0);
+  const dueGaps = dueLearningGaps();
+
+  function markDone(id: string) {
+    const item = items.find((entry) => entry.id === id);
+    if (!item || item.status === "done" || item.source === "event") return;
+    if (item.gapId) { setReviewCheck(item); return; }
+    if (item.cmsId) completeCmsActivity(item.cmsId); else saveAcademicState(applyMissionCompletion(loadAcademicState(), id));
+    setItems((current) => {
+      const updated = current.map((entry) => entry.id === id ? { ...entry, status: "done" as const } : entry);
+      const nextPending = updated.find((entry) => entry.status !== "done" && entry.source !== "event");
+      return updated.map((entry) => ({ ...entry, status: entry.status === "done" ? "done" as const : entry.id === nextPending?.id ? "next" as const : entry.status }));
+    });
+  }
+
+  function finishReview(strength: number) {
+    if (!reviewCheck?.gapId) return;
+    reinforceLearningGap(reviewCheck.gapId, strength);
+    setItems((current) => {
+      const updated = current.map((entry) => entry.id === reviewCheck.id ? { ...entry, status: "done" as const } : entry);
+      const nextPending = updated.find((entry) => entry.status !== "done" && entry.source !== "event");
+      return updated.map((entry) => ({ ...entry, status: entry.status === "done" ? "done" as const : entry.id === nextPending?.id ? "next" as const : entry.status }));
+    });
+    setReviewCheck(null);
+  }
+
+  function reportMissedDay() {
+    if (pendingMinutes <= 0) return;
+    const nextState = registerMissedDay({ missionIds: pendingItems.map((item) => item.id), missedMinutes: pendingMinutes, priorityCode: critical?.code ?? null, priorityReason: critical?.reason ?? null });
+    setPlannerState(nextState); setRecoveryMinutes(pendingMinutes); setRecoveryMode(false); setShowRecoveryNotice(true);
+  }
+
+  function startRecovery() {
+    const state = loadPlannerState();
+    const missed = Math.max(15, state.missedMinutes || pendingMinutes);
+    const nextPlan = replanAfterMissedDay(getWorkload(), missed, availableMinutes, 7);
+    const accepted = acceptRecoveryPlan({ ...state, missedMinutes: missed });
+    setPlannerState(accepted); setRecoveryMinutes(missed); setRecoveryMode(true); setItems(planItems(nextPlan[0].missions)); setShowRecoveryNotice(false);
+  }
+
+
 
   return <div className="app"><header className="topbar"><div className="brand-area"><span className="brand">NEXO</span><span className="brand-subtitle">Assistente Estudantil</span></div><nav className="desktop-nav"><a href="/">Hoje</a><a className="active" href="/agenda">Agenda</a><a href="/disciplinas">Disciplinas</a><a href="/progresso">Progresso</a></nav><AccountMenu /></header><main className="main-content"><section className="welcome"><div><p className="eyebrow">SEU CAMINHO DE ESTUDOS</p><h1>Sua semana,<br />organizada.</h1><p className="welcome-text">O NEXO não abandona uma pendência. Quando o ritmo muda, ele recalcula o caminho.</p></div></section><section className="agenda-container">{showRecoveryNotice && <div className="recovery-banner"><span>↻</span><div><strong>Tudo bem. O NEXO recalculou.</strong><p>Você deixou <b>{plannerState.missedMinutes} min</b> para trás. A prioridade agora é <b>{plannerState.priorityCode ?? "a disciplina mais crítica"}</b>{plannerState.priorityReason ? ` — ${plannerState.priorityReason}` : "."}</p></div><button onClick={startRecovery}>Aceitar novo plano <span>→</span></button><button className="recovery-dismiss" onClick={() => setShowRecoveryNotice(false)}>Agora não</button></div>}{recoveryMode && <div className="planner-banner"><span>⚡</span><div><strong>Plano recalculado pelo NEXO</strong><p>{recoveryMinutes} min de pendências considerados. A carga extra foi limitada para evitar sobrecarga.</p></div></div>}<div className="agenda-header"><div><p className="eyebrow">{todayLabel()}</p><h2>Plano de hoje</h2></div><div className="agenda-summary"><strong>{completed}</strong><span>de {items.length} concluídas</span></div></div>{cmsItems().length > 0 && <div className="planner-banner"><span>✓</span><div><strong>Seus compromissos entraram no plano</strong><p>Atividades e aulas informadas aparecem aqui automaticamente.</p></div></div>}{dueGaps.length > 0 && <div className="planner-banner"><span>↻</span><div><strong>O NEXO trouxe uma revisão para o seu plano</strong><p>{dueGaps[0].topic} em {dueGaps[0].discipline} ainda precisa de reforço. A revisão já entrou como missão de 15 minutos.</p></div></div>}{critical && <div className="planner-banner"><span>🧠</span><div><strong>Prioridade definida pelo NEXO: {critical.discipline}</strong><p>{critical.reason} O NEXO colocou essa disciplina na frente para reduzir o risco de acúmulo.</p></div></div>}<div className="agenda-timeline">{items.map((item, index) => { const isDone = item.status === "done"; const isNext = item.status === "next"; return <div className={`agenda-item ${isDone ? "done" : ""} ${isNext ? "next" : ""}`} key={item.id}><div className="agenda-time">{item.time}</div><div className="timeline-line"><span className="timeline-dot">{isDone ? "✓" : ""}</span>{index < items.length - 1 && <span className="timeline-connector" />}</div><article className="agenda-card"><div className="agenda-card-top"><div><span className="task-type">{item.type}</span><h3>{item.title}</h3><p>{item.subject}</p></div><span className="agenda-duration">⏱ {item.duration} min</span></div><div className="agenda-card-footer">{isNext && <span className="next-badge">PRÓXIMO</span>}{isDone && <span className="done-badge">✓ CONCLUÍDO</span>}{!isDone && item.source !== "event" && <button className="agenda-complete" onClick={() => markDone(item.id)}>Marcar como concluído <span>→</span></button>}{!isDone && item.source === "event" && <span className="next-badge">COMPROMISSO</span>}</div></article></div>; })}</div>{pendingMinutes > 0 && !recoveryMode && <div className="missed-day-card"><div><span className="task-type">SE O DIA NÃO SAIU COMO PLANEJADO</span><h3>Não consegui cumprir hoje</h3><p>Sem culpa. O NEXO registra o que ficou para trás e monta um novo caminho para você continuar.</p></div><button onClick={reportMissedDay}>Recalcular meu plano <span>→</span></button></div>}<div className="section-title" style={{ marginTop: "56px" }}><div><p className="eyebrow">PRÓXIMOS 7 DIAS</p><h2>O caminho que o NEXO montou.</h2></div></div><div className="week-plan-grid">{plan.slice(1).map((day) => <article className="week-day" key={day.date}><div><span className="task-type">{day.day}</span><strong>{day.date}</strong></div><b>{day.minutes} min</b><p>{day.missions.length ? `${day.missions.length} missão${day.missions.length > 1 ? "ões" : ""} planejada${day.missions.length > 1 ? "s" : ""}` : "Dia reservado para revisão"}</p>{day.missions.slice(0, 2).map((mission) => <span className="week-mission" key={mission.id}>{mission.subject} · {mission.type}</span>)}</article>)}</div></section></main>{reviewCheck && <div className="mastery-overlay"><div className="mastery-card"><span className="assistant-kicker">🧠 CHECKPOINT DE APRENDIZAGEM</span><h2>Como ficou esse ponto agora?</h2><p>Não é uma nota. Isso só ajuda o NEXO a decidir se você precisa rever esse assunto ou se já pode seguir.</p><strong>{reviewCheck.title}</strong><div className="mastery-actions"><button onClick={() => finishReview(1)}>Ainda não entendi</button><button onClick={() => finishReview(3)}>Entendi melhor</button><button onClick={() => finishReview(5)}>Já consigo seguir</button></div><button className="mastery-later" onClick={() => setReviewCheck(null)}>Responder depois</button></div></div>}<button className="assistant-button" onClick={() => setAssistantOpen(true)}><span className="assistant-sparkle">✨</span><span>Preciso de ajuda</span></button><StudyAssistant open={assistantOpen} onClose={() => setAssistantOpen(false)} /></div>;
 }
