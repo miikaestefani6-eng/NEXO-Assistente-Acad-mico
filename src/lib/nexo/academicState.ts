@@ -10,8 +10,8 @@ export const defaultAcademicState: AcademicDiscipline[] = [
 ];
 
 export function loadAcademicState(): AcademicDiscipline[] {
-  if (typeof window === "undefined") return defaultAcademicState;
-  try { const saved = window.localStorage.getItem(STORAGE_KEY); return saved ? JSON.parse(saved) : defaultAcademicState; } catch { return defaultAcademicState; }
+  if (typeof window === "undefined") return [];
+  try { const saved = window.localStorage.getItem(STORAGE_KEY); return saved ? JSON.parse(saved) : []; } catch { return []; }
 }
 
 export function saveAcademicState(state: AcademicDiscipline[]) {
