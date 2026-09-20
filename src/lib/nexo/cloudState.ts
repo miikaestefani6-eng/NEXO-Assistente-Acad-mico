@@ -81,12 +81,20 @@ export async function hydrateFromCloud() {
     window.localStorage.setItem("nexo-study-profile", JSON.stringify({journeyType:p.journey_type||"faculdade",objective:p.objective||"Organizar meus estudos",targetDate:p.target_date||undefined,availableMinutesPerDay:p.available_minutes_per_day||90,preferredStudyDays:p.preferred_study_days||[1,2,3,4,5]}));
   }
   if (subjectsResult.data?.length) {
-    const subjects=subjectsResult.data.map((s:any)=>({code:s.code||String(s.id).slice(0,8).toUpperCase(),name:s.name,lessons:s.lessons,lessonsDone:s.lessons_done,exercises:s.exercises,exercisesDone:s.exercises_done,assignments:s.assignments,assignmentsDone:s.assignments_done,exam:s.exam_date?new Date(s.exam_date+"T12:00:00").toLocaleDateString("pt-BR",{day:"2-digit",month:"short"}).toUpperCase().replace(".",""):"A DEFINIR",daysUntilExam:s.exam_date?Math.max(0,Math.ceil((new Date(s.exam_date+"T12:00:00").getTime()-Date.now())/86400000)):30}));
+    const subjects=subjectsResult.data.map((s:any)=>({code:s.code||String(s.id).slice(0,8).toUpperCase(),name:s.name,lessons:s.lessons,lessonsDone:s.lessons_done,exercises:s.exercises,exercisesDone:s.exercises_done,assignments:s.assignments,assignmentsDone:s.assignments_done,exam:s.exam_date?new Date(s.exam_date+"T12:00:00").toLocaleDateString("pt-BR",{day:"2-digit",month:"short"}).toUpperCase().replace(".",""):"A DEFINIR",daysUntilExam:s.exam_date?Math.max(0,Math.ceil((new Date(s.exam_date+"T12:00:00").getTime()-Date.now())/86400000)):30,examDate:s.exam_date||undefined,scheduleKnown:Boolean(s.schedule_known)}));
     window.localStorage.setItem("nexo-academic-state", JSON.stringify(subjects));
   }
   if (gapsResult.data?.length) {
     const gaps=gapsResult.data.map((g:any)=>({id:g.id,discipline:g.discipline_name,topic:g.topic,note:g.note||"",strength:g.strength,occurrences:g.occurrences,lastSeen:g.last_seen,nextReview:g.next_review,resolved:g.resolved}));
     window.localStorage.setItem("nexo-learning-gaps", JSON.stringify(gaps));
+  }
+  if (eventsResult.data?.length) {
+    const events=eventsResult.data.map((e:any)=>({id:e.id,title:e.title,date:e.event_date,time:e.event_time||"",disciplineCode:e.study_subjects?.code||"",kind:e.kind||"Outro"}));
+    window.localStorage.setItem("nexo-admin-events",JSON.stringify(events));
+  }
+  if (activitiesResult.data?.length) {
+    const activities=activitiesResult.data.map((a:any)=>({id:a.client_id,title:a.title,disciplineCode:a.study_subjects?.code||"",type:a.activity_type,dueDate:a.due_date||"",minutes:a.minutes,done:a.done,checklist:Array.isArray(a.checklist)?a.checklist:[]}));
+    window.localStorage.setItem("nexo-admin-activities",JSON.stringify(activities));
   }
   if (materialsResult.data?.length) {
     const materials=materialsResult.data.map((m:any)=>({id:m.id,name:m.name,mimeType:m.mime_type,discipline:m.discipline_name||"Não classificado",addedAt:m.created_at,source:m.source||"assistant",storagePath:m.storage_path}));
