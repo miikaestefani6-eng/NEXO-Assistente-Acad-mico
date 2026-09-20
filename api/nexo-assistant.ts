@@ -1,6 +1,7 @@
 type AssistantBody = {
   message?: string;
   action?: string | null;
+  file?: { name: string; mimeType: string; data: string } | null;
   context?: {
     priority?: string | null;
     priorityReason?: string | null;
@@ -35,6 +36,7 @@ async function callGemini(
   model: string,
   systemInstruction: string,
   prompt: string,
+  file: { name: string; mimeType: string; data: string } | null,
   retries: number,
   delays: number[],
 ) {
@@ -56,7 +58,10 @@ async function callGemini(
           contents: [
             {
               role: "user",
-              parts: [{ text: prompt }],
+              parts: [
+                { text: prompt },
+                ...(file ? [{ inline_data: { mime_type: file.mimeType, data: file.data } }] : []),
+              ],
             },
           ],
           generation_config: {
@@ -98,9 +103,11 @@ export default async function handler(req: any, res: any) {
 
   const body = (req.body ?? {}) as AssistantBody;
   const message = body.message?.trim();
-  if (!message) {
-    return res.status(400).json({ error: "Digite o que você precisa destravar." });
+  const file = body.file ?? null;
+  if (!message && !file) {
+    return res.status(400).json({ error: "Digite o que você precisa destravar ou anexe um material." });
   }
+  if (file && file.data.length > 12_000_000) return res.status(413).json({ error: "Este material é grande demais para esta etapa. Envie um PDF ou imagem menor." });
 
   const context = body.context ?? {};
   const workloadText = (context.workload ?? [])
@@ -123,7 +130,8 @@ Regras de resposta:
 - Para flashcards, entregue cartões em formato Pergunta → Resposta.
 - Para mapa mental, use uma hierarquia textual simples.
 - Para dúvidas, identifique primeiro onde está o bloqueio.
-- Não dê respostas acadêmicas inventadas ou cite fontes inexistentes.`;
+- Não dê respostas acadêmicas inventadas ou cite fontes inexistentes.
+- Quando houver um material anexado, use-o como fonte principal para explicar, resumir, criar flashcards, mapa mental ou responder dúvidas. Diferencie claramente o que está no material de conhecimento geral quando necessário.`;
 
   const prompt = `AÇÃO SOLICITADA: ${body.action ?? "conversa"}
 PRIORIDADE ATUAL: ${context.priority ?? "não definida"}
@@ -133,7 +141,7 @@ CARGA DE ESTUDOS ATUAL:
 ${workloadText || "- Não informada"}
 
 MENSAGEM DO ESTUDANTE:
-${message}`;
+${message || "Analise o material anexado e me ajude com ele."}\nMATERIAL ANEXADO: ${file ? file.name : "nenhum"}`;
 
   try {
     // Primeira linha: tenta o modelo principal algumas vezes com backoff exponencial.
@@ -142,6 +150,7 @@ ${message}`;
       "gemini-3.7-flash",
       systemInstruction,
       prompt,
+      file,
       3,
       [2000, 5000, 10000],
     );
@@ -156,6 +165,7 @@ ${message}`;
         "gemini-3.5-flash-lite",
         systemInstruction,
         prompt,
+        file,
         2,
         [3000, 8000],
       );
