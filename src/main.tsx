@@ -8,7 +8,7 @@ import Progresso from "./Progresso";
 import Onboarding from "./Onboarding";
 import Auth from "./Auth";
 import { supabase, supabaseConfigured } from "./lib/supabase";
-import { hydrateFromCloud } from "./lib/nexo/cloudState";
+import { hydrateFromCloud, isOnboardingCompleted } from "./lib/nexo/cloudState";
 import "./styles.css";
 import "./nexo-enhancements.css";
 
@@ -16,13 +16,14 @@ function Router() {
   const [path, setPath] = React.useState(window.location.pathname);
   const [authReady, setAuthReady] = React.useState(!supabaseConfigured);
   const [signedIn, setSignedIn] = React.useState(false);
+  const [onboardingDone, setOnboardingDone] = React.useState(true);
   React.useEffect(() => {
     if (!supabase) { setAuthReady(true); return; }
     let active=true;
     void supabase.auth.getSession().then(async ({data}) => {
       if (!active) return;
       const logged=Boolean(data.session); setSignedIn(logged);
-      if (logged) await hydrateFromCloud();
+      if (logged) { await hydrateFromCloud(); setOnboardingDone(await isOnboardingCompleted()); }
       if (active) setAuthReady(true);
     });
     const {data:listener}=supabase.auth.onAuthStateChange((_event,session)=>{ setSignedIn(Boolean(session)); });
@@ -33,6 +34,7 @@ function Router() {
   if (!authReady) return <div className="nexo-boot">NEXO está preparando seu caminho…</div>;
   if (path === "/entrar") return signedIn ? <App /> : <Auth />;
   if (supabaseConfigured && !signedIn) return <Auth />;
+  if (signedIn && !onboardingDone && path !== "/comecar") { window.history.replaceState({}, "", "/comecar"); return <Onboarding />; }
   if (path === "/comecar") return <Onboarding />;
   if (path === "/admin") return <Admin />;
   if (path === "/agenda") return <Agenda />;
