@@ -12,7 +12,7 @@ type AgendaItem = { id: string; cmsId?: string; gapId?: string; time: string; su
 
 function todayISO() { return new Date().toISOString().slice(0, 10); }
 function todayLabel() { return new Intl.DateTimeFormat("pt-BR",{weekday:"long",day:"numeric",month:"long"}).format(new Date()).toUpperCase(); }
-function getWorkload() { return loadAcademicState().map(({ code, name, lessons, lessonsDone, exercises, exercisesDone, assignments, assignmentsDone, daysUntilExam }) => ({ code, name, pendingLessons: lessons - lessonsDone, pendingExercises: exercises - exercisesDone, pendingAssignments: assignments - assignmentsDone, daysUntilExam })); }
+function getWorkload() { return loadAcademicState().map(({ code, name, lessons, lessonsDone, exercises, exercisesDone, assignments, assignmentsDone, daysUntilExam, examDate }) => ({ code, name, pendingLessons: lessons - lessonsDone, pendingExercises: exercises - exercisesDone, pendingAssignments: assignments - assignmentsDone, daysUntilExam, deadlineKnown: Boolean(examDate) })); }
 function planItems(missions: ReturnType<typeof generateAdaptivePlan>[number]["missions"]): AgendaItem[] { return missions.map((mission, index) => ({ id: mission.id, time: index === 0 ? "Agora" : `${19 + index}:00`, subject: mission.subject, title: mission.title, type: mission.type, duration: mission.duration, status: index === 0 ? "next" : "pending", source: "plan" })); }
 
 function cmsItems(): AgendaItem[] {
