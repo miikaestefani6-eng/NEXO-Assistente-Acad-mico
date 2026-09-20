@@ -1,5 +1,5 @@
 import { loadAcademicState, saveAcademicState } from "./academicState";
-import { syncStudyEvents } from "./cloudState";
+import { syncStudyActivities, syncStudyEvents } from "./cloudState";
 
 export type CmsActivityType = "Aula da plataforma" | "Aula ao vivo" | "Exercício" | "Trabalho" | "Revisão";
 export type CmsChecklistItem = { id: string; label: string; done: boolean };
@@ -48,7 +48,7 @@ export function loadCmsActivities(): CmsActivity[] {
   });
 }
 
-export function saveCmsActivities(activities: CmsActivity[]) { safeWrite(ACTIVITY_KEY, activities); }
+export function saveCmsActivities(activities: CmsActivity[]) { safeWrite(ACTIVITY_KEY, activities); void syncStudyActivities(activities); }
 export function loadCmsEvents(): CmsEvent[] { return safeRead<CmsEvent[]>(EVENT_KEY, []); }
 export function saveCmsEvents(events: CmsEvent[]) { safeWrite(EVENT_KEY, events); void syncStudyEvents(events); }
 
