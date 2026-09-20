@@ -7,6 +7,7 @@ import { completeCmsActivity, loadCmsActivities, loadCmsEvents } from "./lib/nex
 import { activeLearningGaps, dueLearningGaps, recordLearningGap, reinforceLearningGap } from "./lib/nexo/learningMemory";
 import { registerStudyMaterial } from "./lib/nexo/studyMaterials";
 import { uploadStudyMaterial } from "./lib/nexo/cloudState";
+import { loadStudyProfile } from "./lib/nexo/studyProfile";
 
 type AgendaItem = { id: string; cmsId?: string; gapId?: string; time: string; subject: string; title: string; type: string; duration: number; status: "next" | "pending" | "done"; source: "cms" | "event" | "plan" | "learning" };
 type AssistantAction = "explain" | "summary" | "flashcards" | "mindmap" | "late" | "doubt";
@@ -29,7 +30,8 @@ function cmsItems(): AgendaItem[] {
 
 function Agenda() {
   const initialPlannerState = loadPlannerState();
-  const initialItems = (() => { const content = cmsItems(); const base = content.length ? content : planItems(generateAdaptivePlan(getWorkload(), 90, 7)[0].missions); const reviews: AgendaItem[] = dueLearningGaps().slice(0, 2).map((gap, index) => ({ id: `learning-${gap.id}`, gapId: gap.id, time: index === 0 ? "Revisão" : "Depois", subject: gap.discipline, title: `Revisar: ${gap.topic}`, type: "Revisão adaptativa", duration: 15, status: "pending", source: "learning" })); return reviews.length ? [...reviews, ...base].map((item, index) => ({ ...item, status: index === 0 ? "next" as const : item.status === "next" ? "pending" as const : item.status })) : base; })();
+  const availableMinutes = loadStudyProfile().availableMinutesPerDay;
+  const initialItems = (() => { const content = cmsItems(); const base = content.length ? content : planItems(generateAdaptivePlan(getWorkload(), availableMinutes, 7)[0].missions); const reviews: AgendaItem[] = dueLearningGaps().slice(0, 2).map((gap, index) => ({ id: `learning-${gap.id}`, gapId: gap.id, time: index === 0 ? "Revisão" : "Depois", subject: gap.discipline, title: `Revisar: ${gap.topic}`, type: "Revisão adaptativa", duration: 15, status: "pending", source: "learning" })); return reviews.length ? [...reviews, ...base].map((item, index) => ({ ...item, status: index === 0 ? "next" as const : item.status === "next" ? "pending" as const : item.status })) : base; })();
   const [items, setItems] = useState<AgendaItem[]>(initialItems);
   const [recoveryMode, setRecoveryMode] = useState(initialPlannerState.recoveryActive);
   const [recoveryMinutes, setRecoveryMinutes] = useState(initialPlannerState.missedMinutes);
@@ -47,7 +49,7 @@ function Agenda() {
 
   const workload = useMemo(() => getWorkload(), [items]);
   const critical = useMemo(() => getCriticalDiscipline(workload), [workload]);
-  const plan = useMemo(() => recoveryMode ? replanAfterMissedDay(workload, recoveryMinutes, 90, 7) : generateAdaptivePlan(workload, 90, 7), [recoveryMode, recoveryMinutes, workload]);
+  const plan = useMemo(() => recoveryMode ? replanAfterMissedDay(workload, recoveryMinutes, availableMinutes, 7) : generateAdaptivePlan(workload, availableMinutes, 7), [recoveryMode, recoveryMinutes, workload]);
   const completed = items.filter((item) => item.status === "done").length;
   const pendingItems = items.filter((item) => item.status !== "done" && item.source !== "event");
   const pendingMinutes = pendingItems.reduce((sum, item) => sum + item.duration, 0);
@@ -74,7 +76,7 @@ function Agenda() {
     setPlannerState(nextState); setRecoveryMinutes(pendingMinutes); setRecoveryMode(false); setShowRecoveryNotice(true);
   }
   function startRecovery() {
-    const state = loadPlannerState(); const missed = Math.max(15, state.missedMinutes || pendingMinutes); const nextPlan = replanAfterMissedDay(getWorkload(), missed, 90, 7); const accepted = acceptRecoveryPlan({ ...state, missedMinutes: missed });
+    const state = loadPlannerState(); const missed = Math.max(15, state.missedMinutes || pendingMinutes); const nextPlan = replanAfterMissedDay(getWorkload(), missed, availableMinutes, 7); const accepted = acceptRecoveryPlan({ ...state, missedMinutes: missed });
     setPlannerState(accepted); setRecoveryMinutes(missed); setRecoveryMode(true); setItems(planItems(nextPlan[0].missions)); setShowRecoveryNotice(false);
   }
   function openAssistant(action?: AssistantAction) {
