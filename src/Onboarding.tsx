@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { saveStudyProfile, type StudyJourneyType } from "./lib/nexo/studyProfile";
 import { applyIntake, type IntakeResult } from "./lib/nexo/intakeState";
+import { markOnboardingCompleted } from "./lib/nexo/cloudState";
 
 const journeys: Array<{ id: StudyJourneyType; label: string; hint: string }> = [
   { id: "faculdade", label: "Faculdade", hint: "Disciplinas, aulas, trabalhos e provas" },
@@ -49,16 +50,18 @@ export default function Onboarding() {
     finally { setLoading(false); }
   }
 
-  function confirm() {
+  async function confirm() {
     if (!intake) return;
     saveProfile();
     applyIntake(intake);
+    await markOnboardingCompleted();
     window.localStorage.setItem("nexo-onboarding-complete", "true");
     window.location.href = "/";
   }
 
-  function demo() {
+  async function demo() {
     saveProfile();
+    await markOnboardingCompleted();
     window.localStorage.setItem("nexo-onboarding-complete", "true");
     window.location.href = "/";
   }
