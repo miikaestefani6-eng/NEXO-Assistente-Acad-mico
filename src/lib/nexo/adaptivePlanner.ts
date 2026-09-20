@@ -2,7 +2,7 @@ import { generateDailyMissions, type DailyMission } from "./dailyMissions";
 
 export type AdaptiveDay = { day: string; date: string; missions: DailyMission[]; minutes: number; note: string };
 
-type Workload = { code: string; name: string; pendingLessons: number; pendingExercises: number; pendingAssignments: number; daysUntilExam: number };
+type Workload = { code: string; name: string; pendingLessons: number; pendingExercises: number; pendingAssignments: number; daysUntilExam: number; deadlineKnown?: boolean };
 
 export type PriorityDecision = {
   code: string;
@@ -11,12 +11,13 @@ export type PriorityDecision = {
   reason: string;
   pending: number;
   daysUntilExam: number;
+  deadlineKnown: boolean;
 };
 
 function scoreWorkload(item: Workload): number {
   const pending = item.pendingLessons + item.pendingExercises + item.pendingAssignments;
-  const pressure = pending / Math.max(1, item.daysUntilExam);
-  const examUrgency = Math.max(0, 30 - item.daysUntilExam) / 30;
+  const pressure = item.deadlineKnown ? pending / Math.max(1, item.daysUntilExam) : pending * 0.08;
+  const examUrgency = item.deadlineKnown ? Math.max(0, 30 - item.daysUntilExam) / 30 : 0;
   const assignmentWeight = item.pendingAssignments * 1.5;
   return pressure * 10 + examUrgency * 12 + assignmentWeight;
 }
@@ -27,12 +28,15 @@ export function getPriorityDecisions(workloads: Workload[]): PriorityDecision[] 
       const pending = item.pendingLessons + item.pendingExercises + item.pendingAssignments;
       const score = Math.round(scoreWorkload(item) * 10) / 10;
       const pressure = pending / Math.max(1, item.daysUntilExam);
-      const reason = item.daysUntilExam <= 7
-        ? `A prova está a ${item.daysUntilExam} dias e há ${pending} pendências.`
-        : pressure >= 1
-          ? `Há ${pending} pendências para ${item.daysUntilExam} dias, criando pressão de recuperação.`
-          : `A prova está a ${item.daysUntilExam} dias; o NEXO mantém avanço preventivo.`;
-      return { code: item.code, discipline: item.name, score, reason, pending, daysUntilExam: item.daysUntilExam };
+      const deadlineKnown = Boolean(item.deadlineKnown);
+      const reason = !deadlineKnown
+        ? `Ainda não há data de avaliação informada; o NEXO considera as ${pending} pendências conhecidas sem inventar urgência.`
+        : item.daysUntilExam <= 7
+          ? `A prova está a ${item.daysUntilExam} dias e há ${pending} pendências.`
+          : pressure >= 1
+            ? `Há ${pending} pendências para ${item.daysUntilExam} dias, criando pressão de recuperação.`
+            : `A prova está a ${item.daysUntilExam} dias; o NEXO mantém avanço preventivo.`;
+      return { code: item.code, discipline: item.name, score, reason, pending, daysUntilExam: item.daysUntilExam, deadlineKnown };
     })
     .sort((a, b) => b.score - a.score);
 }
@@ -56,7 +60,7 @@ export function generateAdaptivePlan(workloads: Workload[], availableMinutes = 9
       if (mission.type === "Exercício") item.pendingExercises = Math.max(0, item.pendingExercises - 1);
       if (mission.type === "Trabalho") item.pendingAssignments = Math.max(0, item.pendingAssignments - 1);
     }
-    for (const item of remaining) item.daysUntilExam = Math.max(1, item.daysUntilExam - 1);
+    for (const item of remaining) if (item.deadlineKnown) item.daysUntilExam = Math.max(1, item.daysUntilExam - 1);
   }
   return plan;
 }
