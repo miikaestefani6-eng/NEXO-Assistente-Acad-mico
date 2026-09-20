@@ -42,6 +42,17 @@ export function recordLearningGap(input: { discipline?: string; topic?: string; 
 export function resolveLearningGap(id: string) {
   const next = load().map((g) => g.id === id ? { ...g, resolved: true } : g); save(next); return next;
 }
+export function reinforceLearningGap(id: string, strength: number) {
+  const now = new Date();
+  const normalized = Math.max(1, Math.min(5, strength));
+  const next = load().map((g) => {
+    if (g.id !== id) return g;
+    if (normalized >= 4) return { ...g, strength: normalized, resolved: true, lastSeen: now.toISOString() };
+    const review = new Date(now); review.setDate(now.getDate() + (normalized <= 2 ? 1 : 3));
+    return { ...g, strength: normalized, occurrences: g.occurrences + 1, lastSeen: now.toISOString(), nextReview: review.toISOString(), resolved: false };
+  });
+  save(next); return next;
+}
 export function dueLearningGaps() {
   const now = Date.now();
   return load().filter((g) => !g.resolved && new Date(g.nextReview).getTime() <= now).sort((a,b) => a.strength - b.strength || b.occurrences - a.occurrences);
