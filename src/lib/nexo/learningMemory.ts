@@ -1,4 +1,5 @@
 import { syncLearningGap } from "./cloudState";
+import { clearSyncPending, markSyncPending } from "./syncStatus";
 export type LearningGap = {
   id: string;
   discipline: string;
@@ -38,10 +39,10 @@ export function recordLearningGap(input: { discipline?: string; topic?: string; 
   } else {
     items.push({ id: `gap-${Date.now()}`, discipline, topic, note: input.note || "O estudante demonstrou dificuldade neste ponto.", strength, occurrences: 1, lastSeen: today.toISOString(), nextReview: review.toISOString(), resolved: false });
   }
-  save(items); const changed = index >= 0 ? items[index] : items[items.length - 1]; if (changed) void syncLearningGap(changed); return items;
+  save(items); const changed = index >= 0 ? items[index] : items[items.length - 1]; if (changed) { markSyncPending("learning"); void syncLearningGap(changed).then(ok=>{if(ok)clearSyncPending("learning");}); } return items;
 }
 export function resolveLearningGap(id: string) {
-  const next = load().map((g) => g.id === id ? { ...g, resolved: true } : g); save(next); const changed = next.find((g) => g.id === id); if (changed) void syncLearningGap(changed); return next;
+  const next = load().map((g) => g.id === id ? { ...g, resolved: true } : g); save(next); const changed = next.find((g) => g.id === id); if (changed) { markSyncPending("learning"); void syncLearningGap(changed).then(ok=>{if(ok)clearSyncPending("learning");}); } return next;
 }
 export function reinforceLearningGap(id: string, strength: number) {
   const now = new Date();
@@ -52,7 +53,7 @@ export function reinforceLearningGap(id: string, strength: number) {
     const review = new Date(now); review.setDate(now.getDate() + (normalized <= 2 ? 1 : 3));
     return { ...g, strength: normalized, occurrences: g.occurrences + 1, lastSeen: now.toISOString(), nextReview: review.toISOString(), resolved: false };
   });
-  save(next); const changed = next.find((g) => g.id === id); if (changed) void syncLearningGap(changed); return next;
+  save(next); const changed = next.find((g) => g.id === id); if (changed) { markSyncPending("learning"); void syncLearningGap(changed).then(ok=>{if(ok)clearSyncPending("learning");}); } return next;
 }
 export function dueLearningGaps() {
   const now = Date.now();
