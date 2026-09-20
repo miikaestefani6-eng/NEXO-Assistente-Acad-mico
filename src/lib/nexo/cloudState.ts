@@ -33,6 +33,19 @@ export async function syncLearningGap(gap: CloudLearningGap) {
   return !error;
 }
 
+
+type CloudEvent = { id:string; title:string; date:string; time:string; disciplineCode:string; kind:"Aula ao vivo"|"Prova"|"Entrega"|"Outro" };
+
+export async function syncStudyEvents(events: CloudEvent[]) {
+  const userId=await currentUserId(); if(!userId) return false;
+  const {data:subjects}=await supabase.from("study_subjects").select("id,code").eq("user_id",userId);
+  const byCode=new Map((subjects||[]).map((s:any)=>[s.code,s.id]));
+  const {error:del}=await supabase.from("study_events").delete().eq("user_id",userId); if(del) return false;
+  if(!events.length) return true;
+  const rows=events.map(e=>({user_id:userId,subject_id:byCode.get(e.disciplineCode)||null,title:e.title,kind:e.kind,event_date:e.date,event_time:e.time||null}));
+  const {error}=await supabase.from("study_events").insert(rows); return !error;
+}
+
 export async function uploadStudyMaterial(file: File, discipline="Não classificado") {
   if(!supabase) return null; const userId=await currentUserId(); if(!userId) return null;
   const safe=file.name.replace(/[^a-zA-Z0-9._-]/g,"-"); const path=`${userId}/${Date.now()}-${safe}`;
@@ -45,11 +58,12 @@ export async function uploadStudyMaterial(file: File, discipline="Não classific
 export async function hydrateFromCloud() {
   if (!supabase || typeof window === "undefined") return false;
   const userId = await currentUserId(); if (!userId) return false;
-  const [profileResult, subjectsResult, gapsResult, materialsResult] = await Promise.all([
+  const [profileResult, subjectsResult, gapsResult, materialsResult, eventsResult] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
     supabase.from("study_subjects").select("*").eq("user_id", userId).order("created_at"),
     supabase.from("learning_gaps").select("*").eq("user_id", userId).order("last_seen", { ascending:false }),
     supabase.from("study_materials").select("*").eq("user_id", userId).order("created_at", { ascending:false }),
+    supabase.from("study_events").select("*,study_subjects(code)").eq("user_id",userId).order("event_date"),
   ]);
   if (profileResult.data) {
     const p=profileResult.data;
