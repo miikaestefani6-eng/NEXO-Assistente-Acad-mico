@@ -31,7 +31,8 @@ function Router() {
   React.useEffect(() => { const handlePopState = () => setPath(window.location.pathname); window.addEventListener("popstate", handlePopState); return () => window.removeEventListener("popstate", handlePopState); }, []);
   React.useEffect(() => { const handleInternalNavigation = (event: MouseEvent) => { const target = event.target as HTMLElement | null; const link = target?.closest("a[href]") as HTMLAnchorElement | null; if (!link) return; const href = link.getAttribute("href"); if (!href || !href.startsWith("/") || href.startsWith("//")) return; event.preventDefault(); window.history.pushState({}, "", href); setPath(href); window.scrollTo({ top: 0, behavior: "smooth" }); }; document.addEventListener("click", handleInternalNavigation); return () => document.removeEventListener("click", handleInternalNavigation); }, []);
   if (!authReady) return <div className="nexo-boot">NEXO está preparando seu caminho…</div>;
-  if (path === "/entrar") return signedIn ? <App /> : <Auth />;
+  if (path === "/entrar" && signedIn) { window.history.replaceState({}, "", onboardingDone ? "/" : "/comecar"); return onboardingDone ? <App /> : <Onboarding />; }
+  if (path === "/entrar") return <Auth />;
   if (supabaseConfigured && !signedIn) return <Auth />;
   if (signedIn && !onboardingDone && path !== "/comecar") { window.history.replaceState({}, "", "/comecar"); return <Onboarding />; }
   if (path === "/comecar") return <Onboarding />;
