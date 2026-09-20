@@ -1,4 +1,5 @@
 import { syncSubjects } from "./cloudState";
+import { clearSyncPending, markSyncPending } from "./syncStatus";
 export type AcademicDiscipline = { code: string; name: string; lessons: number; lessonsDone: number; exercises: number; exercisesDone: number; assignments: number; assignmentsDone: number; exam: string; daysUntilExam: number; examDate?: string; scheduleKnown?: boolean };
 
 const STORAGE_KEY = "nexo-academic-state";
@@ -16,7 +17,7 @@ export function loadAcademicState(): AcademicDiscipline[] {
 
 export function saveAcademicState(state: AcademicDiscipline[]) {
   if (typeof window !== "undefined") window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  void syncSubjects(state);
+  markSyncPending("subjects"); void syncSubjects(state).then(ok=>{if(ok)clearSyncPending("subjects");});
 }
 
 export function applyMissionCompletion(state: AcademicDiscipline[], missionId: string) {
