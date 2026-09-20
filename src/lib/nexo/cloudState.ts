@@ -1,5 +1,5 @@
 import { supabase } from "../supabase";
-type CloudDiscipline = { code:string; name:string; lessons:number; lessonsDone:number; exercises:number; exercisesDone:number; assignments:number; assignmentsDone:number; exam:string; daysUntilExam:number; examDate?:string };
+type CloudDiscipline = { code:string; name:string; lessons:number; lessonsDone:number; exercises:number; exercisesDone:number; assignments:number; assignmentsDone:number; exam:string; daysUntilExam:number; examDate?:string; scheduleKnown?:boolean };
 type CloudStudyProfile = { journeyType:string; objective:string; targetDate?:string; availableMinutesPerDay:number; preferredStudyDays:number[] };
 type CloudLearningGap = { id:string; discipline:string; topic:string; note:string; strength:number; occurrences:number; lastSeen:string; nextReview:string; resolved:boolean };
 
@@ -17,14 +17,14 @@ export async function syncProfile(profile: CloudStudyProfile) {
 
 export async function syncSubjects(subjects: CloudDiscipline[]) {
   if (!supabase) return false; const userId=await currentUserId(); if(!userId) return false;
-  const rows=subjects.map(s=>({user_id:userId,code:s.code,name:s.name,lessons:s.lessons,lessons_done:s.lessonsDone,exercises:s.exercises,exercises_done:s.exercisesDone,assignments:s.assignments,assignments_done:s.assignmentsDone,exam_date:s.examDate||null}));
+  const rows=subjects.map(s=>({user_id:userId,code:s.code,name:s.name,lessons:s.lessons,lessons_done:s.lessonsDone,exercises:s.exercises,exercises_done:s.exercisesDone,assignments:s.assignments,assignments_done:s.assignmentsDone,exam_date:s.examDate||null,schedule_known:Boolean(s.scheduleKnown)}));
   if(!rows.length) return true; const {error}=await supabase.from("study_subjects").upsert(rows,{onConflict:"user_id,code"}); return !error;
 }
 
 export async function fetchSubjects(): Promise<CloudDiscipline[] | null> {
   if(!supabase) return null; const userId=await currentUserId(); if(!userId) return null;
   const {data,error}=await supabase.from("study_subjects").select("*").eq("user_id",userId).order("created_at"); if(error||!data?.length) return null;
-  return data.map((s:any)=>({code:s.code||String(s.id).slice(0,8).toUpperCase(),name:s.name,lessons:s.lessons,lessonsDone:s.lessons_done,exercises:s.exercises,exercisesDone:s.exercises_done,assignments:s.assignments,assignmentsDone:s.assignments_done,exam:s.exam_date?new Date(s.exam_date+"T12:00:00").toLocaleDateString("pt-BR",{day:"2-digit",month:"short"}).toUpperCase().replace(".",""):"A DEFINIR",daysUntilExam:s.exam_date?Math.max(0,Math.ceil((new Date(s.exam_date+"T12:00:00").getTime()-Date.now())/86400000)):30}));
+  return data.map((s:any)=>({code:s.code||String(s.id).slice(0,8).toUpperCase(),name:s.name,lessons:s.lessons,lessonsDone:s.lessons_done,exercises:s.exercises,exercisesDone:s.exercises_done,assignments:s.assignments,assignmentsDone:s.assignments_done,exam:s.exam_date?new Date(s.exam_date+"T12:00:00").toLocaleDateString("pt-BR",{day:"2-digit",month:"short"}).toUpperCase().replace(".",""):"A DEFINIR",daysUntilExam:s.exam_date?Math.max(0,Math.ceil((new Date(s.exam_date+"T12:00:00").getTime()-Date.now())/86400000)):30,examDate:s.exam_date||undefined,scheduleKnown:Boolean(s.schedule_known)}));
 }
 
 export async function syncLearningGap(gap: CloudLearningGap) {
@@ -33,6 +33,16 @@ export async function syncLearningGap(gap: CloudLearningGap) {
   return !error;
 }
 
+
+type CloudActivity = { id:string; title:string; disciplineCode:string; type:string; dueDate:string; minutes:number; done:boolean; checklist:Array<{id:string;label:string;done:boolean}> };
+export async function syncStudyActivities(activities: CloudActivity[]) {
+  const userId=await currentUserId(); if(!userId) return false;
+  const {data:subjects}=await supabase.from("study_subjects").select("id,code").eq("user_id",userId);
+  const byCode=new Map((subjects||[]).map((s:any)=>[s.code,s.id]));
+  if(!activities.length){const {error}=await supabase.from("study_activities").delete().eq("user_id",userId);return !error;}
+  const rows=activities.map(a=>({user_id:userId,subject_id:byCode.get(a.disciplineCode)||null,client_id:a.id,title:a.title,activity_type:a.type,due_date:a.dueDate||null,minutes:a.minutes,done:a.done,checklist:a.checklist,updated_at:new Date().toISOString()}));
+  const {error}=await supabase.from("study_activities").upsert(rows,{onConflict:"user_id,client_id"}); return !error;
+}
 
 type CloudEvent = { id:string; title:string; date:string; time:string; disciplineCode:string; kind:"Aula ao vivo"|"Prova"|"Entrega"|"Outro" };
 
@@ -58,12 +68,13 @@ export async function uploadStudyMaterial(file: File, discipline="Não classific
 export async function hydrateFromCloud() {
   if (!supabase || typeof window === "undefined") return false;
   const userId = await currentUserId(); if (!userId) return false;
-  const [profileResult, subjectsResult, gapsResult, materialsResult, eventsResult] = await Promise.all([
+  const [profileResult, subjectsResult, gapsResult, materialsResult, eventsResult, activitiesResult] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
     supabase.from("study_subjects").select("*").eq("user_id", userId).order("created_at"),
     supabase.from("learning_gaps").select("*").eq("user_id", userId).order("last_seen", { ascending:false }),
     supabase.from("study_materials").select("*").eq("user_id", userId).order("created_at", { ascending:false }),
     supabase.from("study_events").select("*,study_subjects(code)").eq("user_id",userId).order("event_date"),
+    supabase.from("study_activities").select("*,study_subjects(code)").eq("user_id",userId).order("created_at"),
   ]);
   if (profileResult.data) {
     const p=profileResult.data;
