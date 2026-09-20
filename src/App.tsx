@@ -29,7 +29,7 @@ function buildTasks(): Task[] {
     id: `cms-${activity.id}`, cmsId: activity.id, title: activity.title,
     subject: byCode.get(activity.disciplineCode) ?? (activity.disciplineCode || "Atividade acadêmica"),
     duration: `${activity.minutes} min`, durationMinutes: activity.minutes, type: activity.type, time: index === 0 ? "Agora" : "A seguir",
-    description: activity.type === "Aula ao vivo" ? "Aula ao vivo cadastrada no CMS. O NEXO separa esse compromisso das aulas da plataforma." : "Atividade cadastrada no CMS e incorporada ao seu próximo passo.",
+    description: activity.type === "Aula ao vivo" ? "Este compromisso já faz parte do seu caminho de hoje." : "O NEXO incorporou esta atividade ao seu próximo passo.",
     steps: activity.checklist.map((step) => step.label), completed: activity.done
   }));
   return cmsTasks.length ? cmsTasks : buildFallbackTasks();
@@ -37,7 +37,7 @@ function buildTasks(): Task[] {
 
 function App() {
   const state = loadAcademicState();
-  const urgent = [...state].sort((a, b) => a.daysUntilExam - b.daysUntilExam)[0];
+  const urgent = [...state].filter((discipline) => Boolean(discipline.examDate)).sort((a, b) => a.daysUntilExam - b.daysUntilExam)[0];
   const plan = buildRecoveryPlan({ pendingLessons: urgent ? Math.max(0, urgent.lessons - urgent.lessonsDone) : 0, pendingExercises: urgent ? Math.max(0, urgent.exercises - urgent.exercisesDone) : 0, pendingAssignments: urgent ? Math.max(0, urgent.assignments - urgent.assignmentsDone) : 0, daysUntilExam: urgent?.daysUntilExam ?? 30, availableMinutesPerDay: 90 });
   const [tasks, setTasks] = useState<Task[]>(buildTasks);
   const [assistantOpen, setAssistantOpen] = useState(false);
