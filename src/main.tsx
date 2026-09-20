@@ -7,14 +7,32 @@ import Disciplinas from "./Disciplinas";
 import Progresso from "./Progresso";
 import Onboarding from "./Onboarding";
 import Auth from "./Auth";
+import { supabase, supabaseConfigured } from "./lib/supabase";
+import { hydrateFromCloud } from "./lib/nexo/cloudState";
 import "./styles.css";
 import "./nexo-enhancements.css";
 
 function Router() {
   const [path, setPath] = React.useState(window.location.pathname);
+  const [authReady, setAuthReady] = React.useState(!supabaseConfigured);
+  const [signedIn, setSignedIn] = React.useState(false);
+  React.useEffect(() => {
+    if (!supabase) { setAuthReady(true); return; }
+    let active=true;
+    void supabase.auth.getSession().then(async ({data}) => {
+      if (!active) return;
+      const logged=Boolean(data.session); setSignedIn(logged);
+      if (logged) await hydrateFromCloud();
+      if (active) setAuthReady(true);
+    });
+    const {data:listener}=supabase.auth.onAuthStateChange((_event,session)=>{ setSignedIn(Boolean(session)); });
+    return () => { active=false; listener.subscription.unsubscribe(); };
+  }, []);
   React.useEffect(() => { const handlePopState = () => setPath(window.location.pathname); window.addEventListener("popstate", handlePopState); return () => window.removeEventListener("popstate", handlePopState); }, []);
   React.useEffect(() => { const handleInternalNavigation = (event: MouseEvent) => { const target = event.target as HTMLElement | null; const link = target?.closest("a[href]") as HTMLAnchorElement | null; if (!link) return; const href = link.getAttribute("href"); if (!href || !href.startsWith("/") || href.startsWith("//")) return; event.preventDefault(); window.history.pushState({}, "", href); setPath(href); window.scrollTo({ top: 0, behavior: "smooth" }); }; document.addEventListener("click", handleInternalNavigation); return () => document.removeEventListener("click", handleInternalNavigation); }, []);
-  if (path === "/entrar") return <Auth />;
+  if (!authReady) return <div className="nexo-boot">NEXO está preparando seu caminho…</div>;
+  if (path === "/entrar") return signedIn ? <App /> : <Auth />;
+  if (supabaseConfigured && !signedIn) return <Auth />;
   if (path === "/comecar") return <Onboarding />;
   if (path === "/admin") return <Admin />;
   if (path === "/agenda") return <Agenda />;
