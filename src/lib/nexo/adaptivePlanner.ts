@@ -48,7 +48,7 @@ export function generateAdaptivePlan(workloads: Workload[], availableMinutes = 9
     const missions = generateDailyMissions(remaining, availableMinutes);
     const minutes = missions.reduce((sum, mission) => sum + mission.duration, 0);
     const critical = getCriticalDiscipline(remaining);
-    plan.push({ day: index === 0 ? "Hoje" : `Dia ${index + 1}`, date: index === 0 ? "1 SET" : `${index + 1} SET`, missions, minutes, note: critical ? `Prioridade: ${critical.discipline}. ${critical.reason}` : "Janela protegida para revisão e recuperação." });
+    plan.push({ day: index === 0 ? "Hoje" : `Dia ${index + 1}`, date: new Date(Date.now() + index * 86400000).toLocaleDateString("pt-BR",{day:"2-digit",month:"short"}).replace(".","").toUpperCase(), missions, minutes, note: critical ? `Prioridade: ${critical.discipline}. ${critical.reason}` : "Janela protegida para revisão e recuperação." });
     for (const mission of missions) {
       const item = remaining.find((workload) => mission.id.startsWith(`${workload.code}-`));
       if (!item) continue;
