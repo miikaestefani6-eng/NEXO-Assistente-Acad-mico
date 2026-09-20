@@ -1,3 +1,4 @@
+import { syncProfile } from "./cloudState";
 export type StudyJourneyType = "faculdade" | "concurso" | "vestibular" | "escola" | "certificacao" | "outro";
 
 export type StudyProfile = {
@@ -30,5 +31,6 @@ export function loadStudyProfile(): StudyProfile {
 export function saveStudyProfile(profile: StudyProfile) {
   if (typeof window !== "undefined") {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+    void syncProfile(profile);
   }
 }
