@@ -1,7 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
-import Admin from "./AdminFixed";
 import Agenda from "./Agenda";
 import Disciplinas from "./Disciplinas";
 import Progresso from "./Progresso";
@@ -36,7 +35,7 @@ function Router() {
   if (supabaseConfigured && !signedIn) return <Auth />;
   if (signedIn && !onboardingDone && path !== "/comecar") { window.history.replaceState({}, "", "/comecar"); return <Onboarding />; }
   if (path === "/comecar") return <Onboarding />;
-  if (path === "/admin") return <Admin />;
+  if (path === "/admin") { window.history.replaceState({}, "", "/"); return <App />; }
   if (path === "/agenda") return <Agenda />;
   if (path === "/disciplinas") return <Disciplinas />;
   if (path === "/progresso") return <Progresso />;
