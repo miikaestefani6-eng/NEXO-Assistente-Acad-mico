@@ -8,7 +8,7 @@ import Onboarding from "./Onboarding";
 import Auth from "./Auth";
 import { supabase, supabaseConfigured } from "./lib/supabase";
 import { hydrateFromCloud, isOnboardingCompleted } from "./lib/nexo/cloudState";
-import { retryPendingSync } from "./lib/nexo/syncStatus";
+import { pendingSyncAreas, retryPendingSync } from "./lib/nexo/syncStatus";
 import { clearSessionUser, prepareLocalStateForUser } from "./lib/nexo/sessionState";
 import "./styles.css";
 import "./nexo-enhancements.css";
@@ -24,7 +24,7 @@ function Router() {
     void supabase.auth.getSession().then(async ({data}) => {
       if (!active) return;
       const logged=Boolean(data.session); setSignedIn(logged);
-      if (logged && data.session?.user.id) { prepareLocalStateForUser(data.session.user.id); await hydrateFromCloud(); await retryPendingSync(); setOnboardingDone(await isOnboardingCompleted()); }
+      if (logged && data.session?.user.id) { prepareLocalStateForUser(data.session.user.id); await retryPendingSync(); await hydrateFromCloud(pendingSyncAreas()); setOnboardingDone(await isOnboardingCompleted()); }
       if (active) setAuthReady(true);
     });
     const {data:listener}=supabase.auth.onAuthStateChange((event,session)=>{ if(event==="SIGNED_OUT"){clearSessionUser();setOnboardingDone(false);} else if(session?.user.id){prepareLocalStateForUser(session.user.id);} setSignedIn(Boolean(session)); });
