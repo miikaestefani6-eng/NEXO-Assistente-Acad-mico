@@ -29,6 +29,7 @@ export default function StudyAssistant({ open, onClose }: { open:boolean; onClos
   const [loading,setLoading]=useState(false);
   const [error,setError]=useState("");
   const [file,setFile]=useState<File|null>(null);
+  const [uploadWarning,setUploadWarning]=useState("");
   const fileRef=useRef<HTMLInputElement>(null);
   if(!open) return null;
 
@@ -43,7 +44,7 @@ export default function StudyAssistant({ open, onClose }: { open:boolean; onClos
   }
   async function ask() {
     const message=input.trim(); if((!message&&!file)||loading) return;
-    setLoading(true); setError("");
+    setLoading(true); setError(""); setUploadWarning("");
     try {
       const filePayload=file?{name:file.name,mimeType:file.type||"application/pdf",data:await fileToBase64(file)}:null;
       const response=await fetch("/api/nexo-assistant",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
@@ -56,8 +57,7 @@ export default function StudyAssistant({ open, onClose }: { open:boolean; onClos
       const raw=String(data.answer||""); const gap=raw.match(/\[\[NEXO_GAP:(\{.*?\})\]\]/s);
       if(gap){try{recordLearningGap(JSON.parse(gap[1]));}catch{/* mantém resposta */}}
       setAnswer(raw.replace(/\n?\[\[NEXO_GAP:.*?\]\]/s,"").trim());
-      if(file){registerStudyMaterial({name:file.name,mimeType:file.type||"application/pdf",discipline:critical?.discipline||"Não classificado",source:"assistant"});void uploadStudyMaterial(file,critical?.discipline||"Não classificado");}
-      setFile(null);
+      if(file){ const selectedFile=file; const discipline=critical?.discipline||"Não classificado"; const uploaded=await uploadStudyMaterial(selectedFile,discipline); if(uploaded){registerStudyMaterial({name:selectedFile.name,mimeType:selectedFile.type||"application/pdf",discipline,source:"assistant"});setFile(null);} else {setUploadWarning("A resposta foi gerada, mas o material não foi salvo na sua conta. Você pode tentar enviar o arquivo novamente.");} }
     } catch(e){setError(e instanceof Error?e.message:"Não foi possível responder agora.");}
     finally{setLoading(false);}
   }
@@ -67,7 +67,7 @@ export default function StudyAssistant({ open, onClose }: { open:boolean; onClos
     <div className="assistant-context"><span>CONTEXTO ATUAL</span><strong>{subject}</strong><small>{critical?.reason||"O NEXO usa seu plano, pendências e dificuldades para responder."}</small></div>
     {answer&&<div className="assistant-response"><span>✨ NEXO</span><p>{answer}</p></div>}
     {loading&&<div className="assistant-response"><span>✨ NEXO</span><p>Estou pensando no melhor próximo passo para você…</p></div>}
-    {error&&<div className="assistant-response"><span>⚠️ NEXO</span><p>{error}</p></div>}
+    {error&&<div className="assistant-response"><span>⚠️ NEXO</span><p>{error}</p></div>}{uploadWarning&&<div className="assistant-response"><span>⚠️ ARQUIVO</span><p>{uploadWarning}</p></div>}
     <div className="assistant-actions"><button onClick={()=>choose("explain")}>📖 Explicar conteúdo</button><button onClick={()=>choose("summary")}>📝 Resumir aula</button><button onClick={()=>choose("flashcards")}>🧠 Criar flashcards</button><button onClick={()=>choose("mindmap")}>🗺️ Mapa mental</button><button onClick={()=>choose("late")}>⏳ Estou atrasado</button><button onClick={()=>choose("doubt")}>❓ Não entendi a matéria</button></div>
     <input ref={fileRef} type="file" accept=".pdf,image/png,image/jpeg" hidden onChange={e=>setFile(e.target.files?.[0]??null)}/>
     {file&&<div className="assistant-file"><span>📎</span><div><strong>{file.name}</strong><small>O NEXO vai usar este material para responder.</small></div><button onClick={()=>setFile(null)}>×</button></div>}
