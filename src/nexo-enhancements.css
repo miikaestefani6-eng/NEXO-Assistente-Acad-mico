@@ -156,3 +156,13 @@
 .assistant-file button { border:0; background:transparent; color:var(--muted); font-size:18px; }
 .assistant-input .assistant-attach { padding:0 12px; border:1px solid var(--border); background:white; color:var(--deep); font-size:15px; }
 .assistant-input .assistant-attach:hover { border-color:var(--lagoon); background:var(--lagoon-light); }
+
+.mastery-overlay { position:fixed; inset:0; z-index:90; display:grid; place-items:center; padding:20px; background:rgba(18,35,34,.42); backdrop-filter:blur(4px); }
+.mastery-card { width:min(520px,100%); padding:28px; border-radius:22px; background:white; box-shadow:0 24px 70px rgba(18,35,34,.22); }
+.mastery-card h2 { margin:8px 0 10px; font-family:"Sora",sans-serif; color:var(--deep); font-size:25px; }
+.mastery-card p { color:var(--muted); font-size:11px; line-height:1.6; }
+.mastery-card>strong { display:block; margin:20px 0 12px; padding:12px; border-radius:12px; background:var(--lagoon-light); color:var(--deep); font-size:12px; }
+.mastery-actions { display:grid; gap:8px; }
+.mastery-actions button { padding:13px 14px; border:1px solid var(--border); border-radius:12px; background:white; color:var(--deep); text-align:left; font-weight:700; }
+.mastery-actions button:hover { border-color:var(--lagoon); background:var(--lagoon-light); }
+.mastery-later { width:100%; margin-top:8px; padding:9px; border:0; background:transparent; color:var(--muted); font-size:10px; }
