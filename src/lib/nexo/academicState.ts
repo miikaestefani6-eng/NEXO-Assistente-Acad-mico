@@ -1,5 +1,5 @@
 import { syncSubjects } from "./cloudState";
-export type AcademicDiscipline = { code: string; name: string; lessons: number; lessonsDone: number; exercises: number; exercisesDone: number; assignments: number; assignmentsDone: number; exam: string; daysUntilExam: number };
+export type AcademicDiscipline = { code: string; name: string; lessons: number; lessonsDone: number; exercises: number; exercisesDone: number; assignments: number; assignmentsDone: number; exam: string; daysUntilExam: number; examDate?: string };
 
 const STORAGE_KEY = "nexo-academic-state";
 
