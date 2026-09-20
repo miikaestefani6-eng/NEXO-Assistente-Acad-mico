@@ -1,5 +1,5 @@
 import { saveAcademicState, type AcademicDiscipline } from "./academicState";
-import { EVENT_KEY, loadCmsEvents, type CmsEvent } from "./cmsState";
+import { loadCmsEvents, saveCmsEvents, type CmsEvent } from "./cmsState";
 
 export type IntakeSubject = { name: string; lessons?: number; exercises?: number; assignments?: number; examDate?: string; classDays?: string[] };
 export type IntakeResult = { summary: string; subjects: IntakeSubject[]; events: Array<{ title: string; date: string; time?: string; kind: CmsEvent["kind"]; subject?: string }>; targetDate?: string; missing?: string[]; confidence?: "alta" | "media" | "baixa" };
@@ -37,5 +37,5 @@ export function applyIntake(result: IntakeResult) {
     date: event.date, time: event.time || "", kind: event.kind || "Outro",
     disciplineCode: event.subject ? (codeByName.get(event.subject.toLowerCase()) || "") : "",
   }));
-  if (typeof window !== "undefined" && generated.length) window.localStorage.setItem(EVENT_KEY, JSON.stringify([...existing, ...generated]));
+  if (generated.length) saveCmsEvents([...existing, ...generated]);
 }
