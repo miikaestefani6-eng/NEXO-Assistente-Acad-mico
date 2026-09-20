@@ -27,7 +27,7 @@ export function applyIntake(result: IntakeResult) {
     lessons: Math.max(0, Number(subject.lessons) || 0), lessonsDone: 0,
     exercises: Math.max(0, Number(subject.exercises) || 0), exercisesDone: 0,
     assignments: Math.max(0, Number(subject.assignments) || 0), assignmentsDone: 0,
-    exam: examLabel(subject.examDate), daysUntilExam: daysUntil(subject.examDate),
+    exam: examLabel(subject.examDate), daysUntilExam: daysUntil(subject.examDate), examDate: subject.examDate,
   }));
   if (disciplines.length) saveAcademicState(disciplines);
   const codeByName = new Map(disciplines.map((d) => [d.name.toLowerCase(), d.code]));
