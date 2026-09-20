@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { saveStudyProfile, type StudyJourneyType } from "./lib/nexo/studyProfile";
 import { applyIntake, type IntakeResult } from "./lib/nexo/intakeState";
-import { markOnboardingCompleted } from "./lib/nexo/cloudState";
+import { markOnboardingCompleted, syncProfile } from "./lib/nexo/cloudState";
 
 const journeys: Array<{ id: StudyJourneyType; label: string; hint: string }> = [
   { id: "faculdade", label: "Faculdade", hint: "Disciplinas, aulas, trabalhos e provas" },
@@ -32,9 +32,8 @@ export default function Onboarding() {
   const [saving, setSaving] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  function saveProfile() {
-    saveStudyProfile({ journeyType, objective: objective.trim() || "Organizar meus estudos", availableMinutesPerDay: minutes, preferredStudyDays: [1, 2, 3, 4, 5] });
-  }
+  function currentProfile() { return { journeyType, objective: objective.trim() || "Organizar meus estudos", availableMinutesPerDay: minutes, preferredStudyDays: [1, 2, 3, 4, 5] }; }
+  function saveProfile() { saveStudyProfile(currentProfile()); }
 
   async function analyze() {
     saveProfile();
@@ -55,7 +54,9 @@ export default function Onboarding() {
     if (!intake || saving) return;
     setSaving(true); setError("");
     saveProfile();
-    applyIntake(intake);
+    const profileSaved = await syncProfile(currentProfile());
+    const intakeSaved = profileSaved ? await applyIntake(intake) : false;
+    if (!profileSaved || !intakeSaved) { setError("Organizei seus dados neste dispositivo, mas ainda não consegui salvar todo o seu caminho na conta. Verifique sua conexão e tente novamente."); setSaving(false); return; }
     const saved = await markOnboardingCompleted();
     if (!saved) { setError("Organizei seus dados neste dispositivo, mas não consegui confirmar a sincronização com sua conta. Verifique sua conexão e tente novamente."); setSaving(false); return; }
     window.localStorage.setItem("nexo-onboarding-complete", "true");
