@@ -9,10 +9,14 @@ export function clearLocalUserState(){
  window.dispatchEvent(new Event("nexo-sync-status"));
 }
 export function prepareLocalStateForUser(userId:string){
- if(typeof window==="undefined")return;
+ if(typeof window==="undefined")return false;
  const previous=window.localStorage.getItem(USER_MARKER);
- if(previous&&previous!==userId) clearLocalUserState();
+ const changed=previous!==userId;
+ // Sem marcador não há como provar a quem pertencem dados acadêmicos antigos.
+ // Em um produto com contas, privacidade vence migração implícita de dados locais.
+ if(changed) clearLocalUserState();
  window.localStorage.setItem(USER_MARKER,userId);
+ return changed;
 }
 export function clearSessionUser(){
  if(typeof window==="undefined")return;
