@@ -67,7 +67,7 @@ async function callGemini(
             },
           ],
           generation_config: {
-            max_output_tokens: 500,
+            max_output_tokens: 1800,
           },
         }),
       },
@@ -130,9 +130,10 @@ Regras de resposta:
 - Comece pela ação mais útil agora.
 - Se o estudante estiver atrasado, priorize recuperação sustentável em vez de mandar fazer tudo de uma vez.
 - Para explicar, ensine passo a passo e confirme o conceito essencial.
-- Para resumo, destaque apenas o que precisa ser retido.
-- Para flashcards, entregue cartões em formato Pergunta → Resposta.
-- Para mapa mental, use uma hierarquia textual simples.
+- Para resumo, entregue o resumo completo na própria resposta. Nunca diga que criou, gerou ou preparou um resumo sem mostrar o conteúdo.
+- Para flashcards, entregue todos os cartões na própria resposta, um por linha, em formato "Pergunta → Resposta". Nunca diga "aqui estão" sem incluir os cartões.
+- Para mapa mental, entregue a hierarquia textual completa na própria resposta. Nunca diga que criou um mapa sem mostrar seus tópicos.
+- Se houver material anexado e a ação for resumo, flashcards, explicação ou mapa mental, a resposta deve conter conteúdo concreto extraído do material; não responda apenas com confirmação de que a tarefa foi realizada.
 - Para dúvidas, identifique primeiro onde está o bloqueio.
 - Não dê respostas acadêmicas inventadas ou cite fontes inexistentes.
 - Nunca invente prazo ou urgência. Quando a data de avaliação não estiver informada, trate o prazo como desconhecido e organize apenas as pendências conhecidas.
@@ -143,10 +144,7 @@ Regras de resposta:
 PRIORIDADE ATUAL: ${context.priority ?? "não definida"}
 MOTIVO DA PRIORIDADE: ${context.priorityReason ?? "não informado"}
 MINUTOS PENDENTES HOJE: ${context.pendingMinutes ?? 0}
-CARGA DE ESTUDOS ATUAL:
-${workloadText || "- Não informada"}
-
-MENSAGEM DO ESTUDANTE:
+CARGA DE ESTUDOS ATUAL:\n${workloadText || "- Não informada"}\nDIFICULDADES JÁ REGISTRADAS:\n${gapsText || "- Nenhuma dificuldade registrada"}\n\nMENSAGEM DO ESTUDANTE:
 ${message || "Analise o material anexado e me ajude com ele."}\nMATERIAL ANEXADO: ${file ? file.name : "nenhum"}`;
 
   try {
