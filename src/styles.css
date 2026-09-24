@@ -1048,3 +1048,73 @@ a {
     font-weight: 700;
   }
 }
+
+
+/* Beta mobile polish — Hoje, Agenda e Progresso */
+@media (max-width: 680px) {
+  .welcome { margin-bottom: 26px; }
+  .welcome h1 { font-size: 36px; line-height: 1.08; }
+  .welcome-text { margin-top: 14px; line-height: 1.55; }
+  .day-progress { margin-top: 18px; padding: 13px 14px; border-radius: 16px; background: rgba(255,253,249,.94); }
+  .dashboard-grid { gap: 18px; }
+  .mission-header { margin-bottom: 12px; }
+  .mission-card { min-height: 0; padding: 24px 20px; border-radius: 22px; }
+  .mission-content { margin-top: 38px; }
+  .mission-card h3 { font-size: 28px; }
+  .mission-description { margin-top: 12px; }
+  .mission-footer { margin-top: 24px; gap: 12px; }
+  .after-section { margin-top: 32px; }
+  .task { min-height: 72px; border-radius: 15px; background: rgba(255,253,249,.94); }
+  .side-card { padding: 20px; border-radius: 20px; background: rgba(255,253,249,.94); }
+
+  .agenda-container { min-width: 0; }
+  .agenda-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; margin-bottom: 18px; }
+  .agenda-header h2 { margin: 0; font-family: "Sora",sans-serif; font-size: 28px; letter-spacing: -.035em; }
+  .agenda-summary { flex-shrink: 0; padding: 9px 12px; border: 1px solid var(--border); border-radius: 14px; background: rgba(255,253,249,.94); }
+  .agenda-summary strong { display: block; font-size: 18px; }
+  .agenda-summary span { color: var(--muted); font-size: 10px; }
+  .planner-banner,.recovery-banner { align-items: flex-start; gap: 12px; padding: 16px; border-radius: 18px; }
+  .recovery-banner { display: flex; flex-wrap: wrap; }
+  .recovery-banner > div { flex: 1; min-width: 190px; }
+  .recovery-banner button { width: 100%; min-height: 44px; }
+  .agenda-timeline { margin-top: 20px; }
+  .agenda-item { grid-template-columns: 48px 18px minmax(0,1fr); gap: 8px; }
+  .agenda-time { font-size: 10px; overflow-wrap: anywhere; }
+  .agenda-card { min-width: 0; padding: 18px 16px; border-radius: 18px; }
+  .agenda-card-top { display: block; }
+  .agenda-card-top h3 { margin: 5px 0; font-size: 18px; line-height: 1.25; }
+  .agenda-duration { display: inline-block; margin-top: 10px; }
+  .agenda-card-footer { align-items: stretch; flex-direction: column; gap: 10px; }
+  .agenda-complete { width: 100%; min-height: 44px; justify-content: space-between; }
+  .missed-day-card { display: block; padding: 20px; border-radius: 20px; }
+  .missed-day-card button { width: 100%; min-height: 46px; margin-top: 16px; }
+  .section-title { margin-top: 38px !important; }
+  .section-title h2 { font-size: 27px; }
+  .week-plan-grid { grid-template-columns: 1fr; gap: 12px; }
+  .week-day { min-width: 0; border-radius: 18px; }
+
+  .progress-hero { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 22px 20px; border-radius: 22px; }
+  .progress-number { font-size: 48px; }
+  .progress-ring { width: 76px; height: 76px; flex: 0 0 76px; }
+  .insight-card { align-items: flex-start; gap: 12px; padding: 18px 16px; border-radius: 18px; }
+  .insight-card > div { min-width: 0; flex: 1; }
+  .insight-card a { flex-shrink: 0; font-size: 11px; }
+  .progress-grid { grid-template-columns: 1fr; gap: 14px; }
+  .progress-card { min-width: 0; padding: 20px 18px; border-radius: 20px; }
+  .progress-card-head { align-items: flex-start; gap: 12px; }
+  .progress-card-head h3 { font-size: 21px; line-height: 1.2; }
+  .risk-dot { flex-shrink: 0; font-size: 8px; }
+  .progress-card-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+  .progress-card-meta strong { grid-column: 1 / -1; font-size: 22px; }
+  .progress-exam { margin-top: 16px; }
+  .progress-detail { margin-top: 16px; padding-top: 16px; }
+}
+
+@media (max-width: 390px) {
+  .agenda-item { grid-template-columns: 40px 14px minmax(0,1fr); gap: 6px; }
+  .agenda-card { padding: 16px 13px; }
+  .progress-hero { align-items: flex-start; }
+  .progress-ring { width: 64px; height: 64px; flex-basis: 64px; }
+  .insight-card { flex-wrap: wrap; }
+  .insight-card a { width: 100%; padding-left: 44px; }
+}
