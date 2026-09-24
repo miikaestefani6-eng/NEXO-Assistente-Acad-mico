@@ -34,18 +34,20 @@ export default function StudyAssistant({ open, onClose }: { open:boolean; onClos
   const [lastRequest,setLastRequest]=useState<{action:AssistantAction|null;hadFile:boolean}|null>(null);
   const [savedToPlan,setSavedToPlan]=useState(false);
   const [lastMaterialName,setLastMaterialName]=useState("");
+  const [materialDiscipline,setMaterialDiscipline]=useState("");
   const fileRef=useRef<HTMLInputElement>(null);
   if(!open) return null;
 
   const work=workload();
   const critical=getCriticalDiscipline(work);
   const pendingMinutes=work.reduce((sum,item)=>sum+Math.max(0,item.pendingLessons)*30+Math.max(0,item.pendingExercises)*15+Math.max(0,item.pendingAssignments)*45,0);
-  const subject=critical?.discipline ?? "seus estudos";
+  const state=loadAcademicState();
+  const subject=materialDiscipline || critical?.discipline || (state.length===1 ? state[0].name : "seus estudos");
 
   function addMaterialToPlan() {
     if (!lastRequest?.hadFile || !file && !answer) return;
     const state=loadAcademicState();
-    const discipline=critical ? state.find(d=>d.name===critical.discipline) : state[0];
+    const discipline=state.find(d=>d.name===materialDiscipline) ?? (critical ? state.find(d=>d.name===critical.discipline) : state[0]);
     if(!discipline){setError("Adicione uma disciplina antes de transformar o material em missão.");return;}
     const title=lastMaterialName ? `Estudar ${lastMaterialName}` : `Revisar material de ${discipline.name}`;
     const activities=loadCmsActivities();
@@ -73,19 +75,20 @@ export default function StudyAssistant({ open, onClose }: { open:boolean; onClos
       const data=await response.json(); if(!response.ok) throw new Error(data?.error||"Não foi possível responder agora.");
       const raw=String(data.answer||"");
       if(!raw.trim()) throw new Error("O NEXO processou o pedido, mas não recebeu conteúdo para mostrar. Tente novamente.");
+      if(file&&state.length>1&&!materialDiscipline) throw new Error("Escolha a disciplina deste material para o NEXO organizá-lo no lugar certo.");
       setLastRequest({action,hadFile:Boolean(file)});
       if(file) setLastMaterialName(file.name);
       const gap=raw.match(/\[\[NEXO_GAP:(\{.*?\})\]\]/s);
       if(gap){try{recordLearningGap(JSON.parse(gap[1]));}catch{/* mantém resposta */}}
       setAnswer(raw.replace(/\n?\[\[NEXO_GAP:.*?\]\]/s,"").trim());
-      if(file){ const selectedFile=file; const discipline=critical?.discipline||"Não classificado"; const uploaded=await uploadStudyMaterial(selectedFile,discipline); if(uploaded){registerStudyMaterial({name:selectedFile.name,mimeType:selectedFile.type||"application/pdf",discipline,source:"assistant"});setFile(null);} else {setUploadWarning("A resposta foi gerada, mas o material não foi salvo na sua conta. Você pode tentar enviar o arquivo novamente.");} }
+      if(file){ const selectedFile=file; const discipline=materialDiscipline||critical?.discipline||(state.length===1?state[0].name:"Não classificado"); const uploaded=await uploadStudyMaterial(selectedFile,discipline); if(uploaded){registerStudyMaterial({name:selectedFile.name,mimeType:selectedFile.type||"application/pdf",discipline,source:"assistant"});setFile(null);} else {setUploadWarning("A resposta foi gerada, mas o material não foi salvo na sua conta. Você pode tentar enviar o arquivo novamente.");} }
     } catch(e){setError(e instanceof Error?e.message:"Não foi possível responder agora.");}
     finally{setLoading(false);}
   }
 
   return <div className="assistant-overlay" onClick={onClose}><aside className="assistant-panel" onClick={e=>e.stopPropagation()}>
     <div className="assistant-panel-header"><div><span className="assistant-kicker">NEXO · PRECISO DE AJUDA</span><h2>Vamos destravar isso.</h2><p>Converse comigo ou envie o material que está estudando.</p></div><button className="assistant-close" onClick={onClose}>×</button></div>
-    <div className="assistant-context"><span>CONTEXTO ATUAL</span><strong>{subject}</strong><small>{critical?.reason||"O NEXO usa seu plano, pendências e dificuldades para responder."}</small></div>
+    <div className="assistant-context"><span>CONTEXTO ATUAL</span><strong>{subject}</strong><small>{critical?.reason||"O NEXO usa seu plano, pendências e dificuldades para responder."}</small>{state.length>1&&<label className="assistant-discipline-select">Este material é de<select value={materialDiscipline} onChange={e=>setMaterialDiscipline(e.target.value)}><option value="">Selecionar disciplina</option>{state.map(d=><option key={d.code} value={d.name}>{d.name}</option>)}</select></label>}</div>
     {answer&&<div className="assistant-response"><span>✨ NEXO</span>{lastRequest?.hadFile&&<small className="assistant-source-note">Resposta criada a partir do material anexado.</small>}<div style={{whiteSpace:"pre-wrap",lineHeight:1.65}}>{answer}</div>{lastRequest?.hadFile&&<div className="assistant-result-actions"><button disabled={savedToPlan} onClick={addMaterialToPlan}>{savedToPlan?"✓ Adicionado ao plano":"Adicionar revisão ao meu plano"}</button></div>}</div>}
     {loading&&<div className="assistant-response"><span>✨ NEXO</span><p>Estou pensando no melhor próximo passo para você…</p></div>}
     {error&&<div className="assistant-response"><span>⚠️ NEXO</span><p>{error}</p></div>}{uploadWarning&&<div className="assistant-response"><span>⚠️ ARQUIVO</span><p>{uploadWarning}</p></div>}
