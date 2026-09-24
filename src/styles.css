@@ -1205,3 +1205,39 @@ a {
   .week-day { padding: 18px 16px; }
   .week-day > p { margin: 12px 0 0; color: var(--muted); font-size: 11px; }
 }
+
+
+/* Materiais vinculados à disciplina */
+.discipline-materials {
+  margin-top: 16px;
+  padding-top: 15px;
+  display: grid;
+  gap: 7px;
+  border-top: 1px solid var(--border);
+}
+.discipline-materials > span {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .1em;
+}
+.discipline-material {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 11px;
+  background: var(--background);
+}
+.discipline-material b {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--deep);
+  font-size: 11px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.discipline-material small { flex-shrink: 0; color: var(--muted); font-size: 9px; }
