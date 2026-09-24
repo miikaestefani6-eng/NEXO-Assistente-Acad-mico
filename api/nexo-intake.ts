@@ -33,7 +33,7 @@ Use 0 ou string vazia quando o dado não existir. classDays deve conter nomes do
   if (body.file) parts.push({ inline_data: { mime_type: body.file.mimeType, data: body.file.data } });
 
   try {
-    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
+    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
       body: JSON.stringify({ system_instruction: { parts: [{ text: instruction }] }, contents: [{ role: "user", parts }], generation_config: { max_output_tokens: 1600, response_mime_type: "application/json" } }),
