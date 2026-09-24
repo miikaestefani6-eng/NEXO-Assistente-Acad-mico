@@ -892,3 +892,159 @@ a {
     padding-bottom: 150px;
   }
 }
+
+/* Disciplinas — mobile polish */
+@media (max-width: 680px) {
+  .page-hero {
+    display: block;
+    margin-bottom: 26px;
+  }
+  .page-hero h1 {
+    margin: 0;
+    font-size: 36px;
+    line-height: 1.08;
+  }
+  .page-hero .welcome-text {
+    margin-top: 14px;
+    line-height: 1.55;
+  }
+  .hero-stat {
+    width: fit-content;
+    margin-top: 18px;
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+    padding: 9px 13px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: rgba(255,253,249,.9);
+  }
+  .hero-stat strong { font-size: 16px; }
+  .hero-stat span { font-size: 11px; color: var(--muted); }
+
+  .discipline-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .discipline-card {
+    min-width: 0;
+    padding: 22px 20px;
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    background: rgba(255,253,249,.94);
+    box-shadow: 0 12px 30px rgba(23,59,58,.06);
+  }
+  .discipline-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .urgency {
+    display: inline-flex;
+    width: fit-content;
+    padding: 7px 10px;
+    border-radius: 999px;
+    background: var(--lagoon-light);
+    color: var(--lagoon);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+  .discipline-code {
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .08em;
+  }
+  .discipline-card h2 {
+    margin: 0 0 22px;
+    color: var(--deep);
+    font-family: "Sora", sans-serif;
+    font-size: 29px;
+    letter-spacing: -.035em;
+  }
+  .discipline-progress-row {
+    display: grid;
+    grid-template-columns: minmax(0,1fr) auto;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .progress-track {
+    height: 7px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--lagoon-light);
+  }
+  .progress-track > div {
+    height: 100%;
+    border-radius: inherit;
+    background: var(--lagoon);
+  }
+  .discipline-progress-row > strong {
+    color: var(--deep);
+    font-size: 13px;
+  }
+  .discipline-stats {
+    display: grid;
+    grid-template-columns: repeat(3,minmax(0,1fr));
+    gap: 8px;
+    padding: 16px 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .discipline-stats > div {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .discipline-stats strong {
+    color: var(--deep);
+    font-size: 14px;
+  }
+  .discipline-stats span {
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.45;
+  }
+  .discipline-footer {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 18px 0;
+  }
+  .discipline-footer > div {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .discipline-footer span {
+    color: var(--muted);
+    font-size: 10px;
+  }
+  .discipline-footer strong {
+    color: var(--deep);
+    font-size: 12px;
+    line-height: 1.35;
+  }
+  .discipline-button {
+    width: 100%;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border: 0;
+    padding: 0 16px;
+    border-radius: 13px;
+    background: var(--deep);
+    color: white;
+    font-size: 12px;
+    font-weight: 700;
+  }
+}
