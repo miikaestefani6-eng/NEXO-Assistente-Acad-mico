@@ -49,7 +49,7 @@ function Router() {
   if (path === "/admin") { window.history.replaceState({}, "", "/"); return <App />; }
   if (path === "/agenda") return <Agenda key={`agenda-${path}`} />;
   if (path === "/disciplinas") return <Disciplinas key={`disciplinas-${path}`} />;
-  if (path === "/progresso") return <Progresso />;
+  if (path === "/progresso") return <Progresso key={`progresso-${path}`} />;
   return <App />;
 }
 ReactDOM.createRoot(document.getElementById("root")!).render(<React.StrictMode><Router /></React.StrictMode>);
