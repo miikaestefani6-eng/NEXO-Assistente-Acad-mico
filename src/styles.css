@@ -1167,3 +1167,41 @@ a {
   .discipline-editor-actions .complete-button,
   .discipline-editor-actions .mastery-later { width: 100%; justify-content: center; }
 }
+
+
+/* Audit polish — próximos dias */
+.week-day {
+  border: 1px solid var(--border);
+  background: rgba(255,253,249,.92);
+  box-shadow: 0 10px 26px rgba(23,59,58,.045);
+}
+.week-day-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.week-day-head > div { display: grid; gap: 3px; }
+.week-day-head > b {
+  flex-shrink: 0;
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: var(--lagoon-light);
+  color: var(--lagoon);
+  font-size: 10px;
+}
+.week-missions { display: grid; gap: 7px; margin-top: 12px; }
+.week-mission {
+  display: grid;
+  gap: 2px;
+  padding: 9px 10px;
+  border-radius: 11px;
+  background: var(--background);
+  color: var(--deep);
+}
+.week-mission b { font-size: 11px; }
+.week-mission small { color: var(--muted); font-size: 10px; }
+@media (max-width: 680px) {
+  .week-day { padding: 18px 16px; }
+  .week-day > p { margin: 12px 0 0; color: var(--muted); font-size: 11px; }
+}
