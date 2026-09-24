@@ -79,9 +79,14 @@ function Agenda() {
   function startRecovery() {
     const state = loadPlannerState();
     const missed = Math.max(15, state.missedMinutes || pendingMinutes);
-    const nextPlan = replanAfterMissedDay(getWorkload(), missed, availableMinutes, 7);
+    const content = cmsItems();
+    const reviews: AgendaItem[] = dueLearningGaps().slice(0, 2).map((gap, index) => ({ id: `learning-${gap.id}`, gapId: gap.id, time: index === 0 ? "Revisão" : "Depois", subject: gap.discipline, title: `Revisar: ${gap.topic}`, type: "Revisão adaptativa", duration: 15, status: "pending", source: "learning" }));
+    const reservedMinutes = content.filter((item) => item.source === "cms").reduce((sum, item) => sum + item.duration, 0) + reviews.reduce((sum, item) => sum + item.duration, 0);
+    const recoveryBudget = Math.max(0, availableMinutes - reservedMinutes);
+    const nextPlan = replanAfterMissedDay(getWorkload(), missed, recoveryBudget, 7);
     const accepted = acceptRecoveryPlan({ ...state, missedMinutes: missed });
-    setPlannerState(accepted); setRecoveryMinutes(missed); setRecoveryMode(true); setItems(planItems(nextPlan[0].missions)); setShowRecoveryNotice(false);
+    const combined = [...reviews, ...content, ...planItems(nextPlan[0].missions)].map((item, index) => ({ ...item, status: index === 0 ? "next" as const : item.status === "next" ? "pending" as const : item.status }));
+    setPlannerState(accepted); setRecoveryMinutes(missed); setRecoveryMode(true); setItems(combined); setShowRecoveryNotice(false);
   }
 
 
