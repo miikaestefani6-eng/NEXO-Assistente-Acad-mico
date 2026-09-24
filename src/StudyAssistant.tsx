@@ -65,7 +65,7 @@ export default function StudyAssistant({ open, onClose }: { open:boolean; onClos
   return <div className="assistant-overlay" onClick={onClose}><aside className="assistant-panel" onClick={e=>e.stopPropagation()}>
     <div className="assistant-panel-header"><div><span className="assistant-kicker">NEXO · PRECISO DE AJUDA</span><h2>Vamos destravar isso.</h2><p>Converse comigo ou envie o material que está estudando.</p></div><button className="assistant-close" onClick={onClose}>×</button></div>
     <div className="assistant-context"><span>CONTEXTO ATUAL</span><strong>{subject}</strong><small>{critical?.reason||"O NEXO usa seu plano, pendências e dificuldades para responder."}</small></div>
-    {answer&&<div className="assistant-response"><span>✨ NEXO</span><p>{answer}</p></div>}
+    {answer&&<div className="assistant-response"><span>✨ NEXO</span><div style={{whiteSpace:"pre-wrap",lineHeight:1.65}}>{answer}</div></div>}
     {loading&&<div className="assistant-response"><span>✨ NEXO</span><p>Estou pensando no melhor próximo passo para você…</p></div>}
     {error&&<div className="assistant-response"><span>⚠️ NEXO</span><p>{error}</p></div>}{uploadWarning&&<div className="assistant-response"><span>⚠️ ARQUIVO</span><p>{uploadWarning}</p></div>}
     <div className="assistant-actions"><button onClick={()=>choose("explain")}>📖 Explicar conteúdo</button><button onClick={()=>choose("summary")}>📝 Resumir aula</button><button onClick={()=>choose("flashcards")}>🧠 Criar flashcards</button><button onClick={()=>choose("mindmap")}>🗺️ Mapa mental</button><button onClick={()=>choose("late")}>⏳ Estou atrasado</button><button onClick={()=>choose("doubt")}>❓ Não entendi a matéria</button></div>
