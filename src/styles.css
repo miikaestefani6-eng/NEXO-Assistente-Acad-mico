@@ -1118,3 +1118,52 @@ a {
   .insight-card { flex-wrap: wrap; }
   .insight-card a { width: 100%; padding-left: 44px; }
 }
+
+
+/* =========================
+   DISCIPLINE EDITOR
+========================= */
+.discipline-edit-button {
+  width: 100%;
+  margin-top: 9px;
+  border: 0;
+  background: transparent;
+  color: var(--lagoon);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.discipline-editor { max-width: 560px; }
+.discipline-editor label {
+  display: grid;
+  gap: 7px;
+  margin-top: 15px;
+  color: var(--deep);
+  font-size: 12px;
+  font-weight: 700;
+}
+.discipline-editor label small { color: var(--muted); font-weight: 500; }
+.discipline-editor input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 13px 14px;
+  background: var(--white);
+  color: var(--deep);
+  outline: none;
+}
+.discipline-editor input:focus { border-color: var(--lagoon); }
+.discipline-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+}
+@media (max-width: 680px) {
+  .discipline-editor { width: calc(100vw - 28px); max-height: 88vh; overflow-y: auto; padding: 24px 20px; }
+  .discipline-editor-actions { align-items: stretch; flex-direction: column-reverse; }
+  .discipline-editor-actions .complete-button,
+  .discipline-editor-actions .mastery-later { width: 100%; justify-content: center; }
+}
