@@ -47,8 +47,8 @@ function Router() {
   if (signedIn && onboardingDone && path === "/comecar") { window.history.replaceState({}, "", "/"); return <App />; }
   if (path === "/comecar") return <Onboarding />;
   if (path === "/admin") { window.history.replaceState({}, "", "/"); return <App />; }
-  if (path === "/agenda") return <Agenda />;
-  if (path === "/disciplinas") return <Disciplinas />;
+  if (path === "/agenda") return <Agenda key={`agenda-${path}`} />;
+  if (path === "/disciplinas") return <Disciplinas key={`disciplinas-${path}`} />;
   if (path === "/progresso") return <Progresso />;
   return <App />;
 }
