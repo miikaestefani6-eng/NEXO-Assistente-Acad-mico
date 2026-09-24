@@ -153,7 +153,7 @@ ${message || "Analise o material anexado e me ajude com ele."}\nMATERIAL ANEXADO
     // Primeira linha: tenta o modelo principal algumas vezes com backoff exponencial.
     const primary = await callGemini(
       apiKey,
-      "gemini-2.5-flash",
+      "gemini-3.6-flash",
       systemInstruction,
       prompt,
       file,
@@ -164,11 +164,11 @@ ${message || "Analise o material anexado e me ajude com ele."}\nMATERIAL ANEXADO
     let result = primary;
 
     // Se o modelo principal estiver congestionado ou limitado, troca automaticamente para um modelo Flash-Lite estável.
-    if (primary.failure?.status === 503 || primary.failure?.status === 429) {
-      console.warn("NEXO Gemini: ativando fallback para gemini-2.5-flash-lite.");
+    if ([404, 429, 500, 503].includes(primary.failure?.status ?? 0)) {
+      console.warn("NEXO Gemini: ativando fallback para gemini-3.5-flash-lite.");
       result = await callGemini(
         apiKey,
-        "gemini-2.5-flash-lite",
+        "gemini-3.5-flash-lite",
         systemInstruction,
         prompt,
         file,
