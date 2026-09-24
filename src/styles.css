@@ -852,3 +852,392 @@ a {
     display: none;
   }
 }
+/* Mobile primary navigation */
+.mobile-nav {
+  display: none;
+}
+@media (max-width: 900px) {
+  .mobile-nav {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    z-index: 90;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+    padding: 7px;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: rgba(255, 253, 249, 0.96);
+    box-shadow: 0 14px 40px rgba(23, 59, 58, 0.14);
+    backdrop-filter: blur(14px);
+  }
+  .mobile-nav a {
+    padding: 10px 4px;
+    border-radius: 12px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 700;
+  }
+  .mobile-nav a.active {
+    background: var(--lagoon-light);
+    color: var(--lagoon);
+  }
+  .assistant-button {
+    bottom: 84px;
+  }
+  .main-content {
+    padding-bottom: 150px;
+  }
+}
+
+/* Disciplinas — mobile polish */
+@media (max-width: 680px) {
+  .page-hero {
+    display: block;
+    margin-bottom: 26px;
+  }
+  .page-hero h1 {
+    margin: 0;
+    font-size: 36px;
+    line-height: 1.08;
+  }
+  .page-hero .welcome-text {
+    margin-top: 14px;
+    line-height: 1.55;
+  }
+  .hero-stat {
+    width: fit-content;
+    margin-top: 18px;
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+    padding: 9px 13px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: rgba(255,253,249,.9);
+  }
+  .hero-stat strong { font-size: 16px; }
+  .hero-stat span { font-size: 11px; color: var(--muted); }
+
+  .discipline-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .discipline-card {
+    min-width: 0;
+    padding: 22px 20px;
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    background: rgba(255,253,249,.94);
+    box-shadow: 0 12px 30px rgba(23,59,58,.06);
+  }
+  .discipline-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .urgency {
+    display: inline-flex;
+    width: fit-content;
+    padding: 7px 10px;
+    border-radius: 999px;
+    background: var(--lagoon-light);
+    color: var(--lagoon);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+  .discipline-code {
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .08em;
+  }
+  .discipline-card h2 {
+    margin: 0 0 22px;
+    color: var(--deep);
+    font-family: "Sora", sans-serif;
+    font-size: 29px;
+    letter-spacing: -.035em;
+  }
+  .discipline-progress-row {
+    display: grid;
+    grid-template-columns: minmax(0,1fr) auto;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .progress-track {
+    height: 7px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--lagoon-light);
+  }
+  .progress-track > div {
+    height: 100%;
+    border-radius: inherit;
+    background: var(--lagoon);
+  }
+  .discipline-progress-row > strong {
+    color: var(--deep);
+    font-size: 13px;
+  }
+  .discipline-stats {
+    display: grid;
+    grid-template-columns: repeat(3,minmax(0,1fr));
+    gap: 8px;
+    padding: 16px 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .discipline-stats > div {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .discipline-stats strong {
+    color: var(--deep);
+    font-size: 14px;
+  }
+  .discipline-stats span {
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.45;
+  }
+  .discipline-footer {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 18px 0;
+  }
+  .discipline-footer > div {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .discipline-footer span {
+    color: var(--muted);
+    font-size: 10px;
+  }
+  .discipline-footer strong {
+    color: var(--deep);
+    font-size: 12px;
+    line-height: 1.35;
+  }
+  .discipline-button {
+    width: 100%;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border: 0;
+    padding: 0 16px;
+    border-radius: 13px;
+    background: var(--deep);
+    color: white;
+    font-size: 12px;
+    font-weight: 700;
+  }
+}
+
+
+/* Beta mobile polish — Hoje, Agenda e Progresso */
+@media (max-width: 680px) {
+  .welcome { margin-bottom: 26px; }
+  .welcome h1 { font-size: 36px; line-height: 1.08; }
+  .welcome-text { margin-top: 14px; line-height: 1.55; }
+  .day-progress { margin-top: 18px; padding: 13px 14px; border-radius: 16px; background: rgba(255,253,249,.94); }
+  .dashboard-grid { gap: 18px; }
+  .mission-header { margin-bottom: 12px; }
+  .mission-card { min-height: 0; padding: 24px 20px; border-radius: 22px; }
+  .mission-content { margin-top: 38px; }
+  .mission-card h3 { font-size: 28px; }
+  .mission-description { margin-top: 12px; }
+  .mission-footer { margin-top: 24px; gap: 12px; }
+  .after-section { margin-top: 32px; }
+  .task { min-height: 72px; border-radius: 15px; background: rgba(255,253,249,.94); }
+  .side-card { padding: 20px; border-radius: 20px; background: rgba(255,253,249,.94); }
+
+  .agenda-container { min-width: 0; }
+  .agenda-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; margin-bottom: 18px; }
+  .agenda-header h2 { margin: 0; font-family: "Sora",sans-serif; font-size: 28px; letter-spacing: -.035em; }
+  .agenda-summary { flex-shrink: 0; padding: 9px 12px; border: 1px solid var(--border); border-radius: 14px; background: rgba(255,253,249,.94); }
+  .agenda-summary strong { display: block; font-size: 18px; }
+  .agenda-summary span { color: var(--muted); font-size: 10px; }
+  .planner-banner,.recovery-banner { align-items: flex-start; gap: 12px; padding: 16px; border-radius: 18px; }
+  .recovery-banner { display: flex; flex-wrap: wrap; }
+  .recovery-banner > div { flex: 1; min-width: 190px; }
+  .recovery-banner button { width: 100%; min-height: 44px; }
+  .agenda-timeline { margin-top: 20px; }
+  .agenda-item { grid-template-columns: 48px 18px minmax(0,1fr); gap: 8px; }
+  .agenda-time { font-size: 10px; overflow-wrap: anywhere; }
+  .agenda-card { min-width: 0; padding: 18px 16px; border-radius: 18px; }
+  .agenda-card-top { display: block; }
+  .agenda-card-top h3 { margin: 5px 0; font-size: 18px; line-height: 1.25; }
+  .agenda-duration { display: inline-block; margin-top: 10px; }
+  .agenda-card-footer { align-items: stretch; flex-direction: column; gap: 10px; }
+  .agenda-complete { width: 100%; min-height: 44px; justify-content: space-between; }
+  .missed-day-card { display: block; padding: 20px; border-radius: 20px; }
+  .missed-day-card button { width: 100%; min-height: 46px; margin-top: 16px; }
+  .section-title { margin-top: 38px !important; }
+  .section-title h2 { font-size: 27px; }
+  .week-plan-grid { grid-template-columns: 1fr; gap: 12px; }
+  .week-day { min-width: 0; border-radius: 18px; }
+
+  .progress-hero { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 22px 20px; border-radius: 22px; }
+  .progress-number { font-size: 48px; }
+  .progress-ring { width: 76px; height: 76px; flex: 0 0 76px; }
+  .insight-card { align-items: flex-start; gap: 12px; padding: 18px 16px; border-radius: 18px; }
+  .insight-card > div { min-width: 0; flex: 1; }
+  .insight-card a { flex-shrink: 0; font-size: 11px; }
+  .progress-grid { grid-template-columns: 1fr; gap: 14px; }
+  .progress-card { min-width: 0; padding: 20px 18px; border-radius: 20px; }
+  .progress-card-head { align-items: flex-start; gap: 12px; }
+  .progress-card-head h3 { font-size: 21px; line-height: 1.2; }
+  .risk-dot { flex-shrink: 0; font-size: 8px; }
+  .progress-card-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+  .progress-card-meta strong { grid-column: 1 / -1; font-size: 22px; }
+  .progress-exam { margin-top: 16px; }
+  .progress-detail { margin-top: 16px; padding-top: 16px; }
+}
+
+@media (max-width: 390px) {
+  .agenda-item { grid-template-columns: 40px 14px minmax(0,1fr); gap: 6px; }
+  .agenda-card { padding: 16px 13px; }
+  .progress-hero { align-items: flex-start; }
+  .progress-ring { width: 64px; height: 64px; flex-basis: 64px; }
+  .insight-card { flex-wrap: wrap; }
+  .insight-card a { width: 100%; padding-left: 44px; }
+}
+
+
+/* =========================
+   DISCIPLINE EDITOR
+========================= */
+.discipline-edit-button {
+  width: 100%;
+  margin-top: 9px;
+  border: 0;
+  background: transparent;
+  color: var(--lagoon);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.discipline-editor { max-width: 560px; }
+.discipline-editor label {
+  display: grid;
+  gap: 7px;
+  margin-top: 15px;
+  color: var(--deep);
+  font-size: 12px;
+  font-weight: 700;
+}
+.discipline-editor label small { color: var(--muted); font-weight: 500; }
+.discipline-editor input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 13px 14px;
+  background: var(--white);
+  color: var(--deep);
+  outline: none;
+}
+.discipline-editor input:focus { border-color: var(--lagoon); }
+.discipline-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+}
+@media (max-width: 680px) {
+  .discipline-editor { width: calc(100vw - 28px); max-height: 88vh; overflow-y: auto; padding: 24px 20px; }
+  .discipline-editor-actions { align-items: stretch; flex-direction: column-reverse; }
+  .discipline-editor-actions .complete-button,
+  .discipline-editor-actions .mastery-later { width: 100%; justify-content: center; }
+}
+
+
+/* Audit polish — próximos dias */
+.week-day {
+  border: 1px solid var(--border);
+  background: rgba(255,253,249,.92);
+  box-shadow: 0 10px 26px rgba(23,59,58,.045);
+}
+.week-day-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.week-day-head > div { display: grid; gap: 3px; }
+.week-day-head > b {
+  flex-shrink: 0;
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: var(--lagoon-light);
+  color: var(--lagoon);
+  font-size: 10px;
+}
+.week-missions { display: grid; gap: 7px; margin-top: 12px; }
+.week-mission {
+  display: grid;
+  gap: 2px;
+  padding: 9px 10px;
+  border-radius: 11px;
+  background: var(--background);
+  color: var(--deep);
+}
+.week-mission b { font-size: 11px; }
+.week-mission small { color: var(--muted); font-size: 10px; }
+@media (max-width: 680px) {
+  .week-day { padding: 18px 16px; }
+  .week-day > p { margin: 12px 0 0; color: var(--muted); font-size: 11px; }
+}
+
+
+/* Materiais vinculados à disciplina */
+.discipline-materials {
+  margin-top: 16px;
+  padding-top: 15px;
+  display: grid;
+  gap: 7px;
+  border-top: 1px solid var(--border);
+}
+.discipline-materials > span {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .1em;
+}
+.discipline-material {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 11px;
+  background: var(--background);
+}
+.discipline-material b {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--deep);
+  font-size: 11px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.discipline-material small { flex-shrink: 0; color: var(--muted); font-size: 9px; }

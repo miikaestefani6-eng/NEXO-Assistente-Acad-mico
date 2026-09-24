@@ -1,7 +1,9 @@
 type AssistantBody = {
   message?: string;
   action?: string | null;
+  file?: { name: string; mimeType: string; data: string } | null;
   context?: {
+    learningGaps?: Array<{ discipline: string; topic: string; note: string; occurrences: number }>;
     priority?: string | null;
     priorityReason?: string | null;
     pendingMinutes?: number;
@@ -10,7 +12,8 @@ type AssistantBody = {
       pendingLessons: number;
       pendingExercises: number;
       pendingAssignments: number;
-      daysUntilExam: number;
+      daysUntilExam: number | null;
+      deadlineKnown?: boolean;
     }>;
   };
 };
@@ -35,6 +38,7 @@ async function callGemini(
   model: string,
   systemInstruction: string,
   prompt: string,
+  file: { name: string; mimeType: string; data: string } | null,
   retries: number,
   delays: number[],
 ) {
@@ -56,11 +60,14 @@ async function callGemini(
           contents: [
             {
               role: "user",
-              parts: [{ text: prompt }],
+              parts: [
+                { text: prompt },
+                ...(file ? [{ inline_data: { mime_type: file.mimeType, data: file.data } }] : []),
+              ],
             },
           ],
           generation_config: {
-            max_output_tokens: 500,
+            max_output_tokens: 1800,
           },
         }),
       },
@@ -98,18 +105,22 @@ export default async function handler(req: any, res: any) {
 
   const body = (req.body ?? {}) as AssistantBody;
   const message = body.message?.trim();
-  if (!message) {
-    return res.status(400).json({ error: "Digite o que você precisa destravar." });
+  const file = body.file ?? null;
+  if (!message && !file) {
+    return res.status(400).json({ error: "Digite o que você precisa destravar ou anexe um material." });
   }
+  if (file && file.data.length > 12_000_000) return res.status(413).json({ error: "Este material é grande demais para esta etapa. Envie um PDF ou imagem menor." });
 
   const context = body.context ?? {};
   const workloadText = (context.workload ?? [])
     .map((item) =>
-      `- ${item.discipline}: ${item.pendingLessons} aulas, ${item.pendingExercises} exercícios, ${item.pendingAssignments} trabalhos pendentes; prova em ${item.daysUntilExam} dias.`
+      `- ${item.discipline}: ${item.pendingLessons} aulas, ${item.pendingExercises} exercícios, ${item.pendingAssignments} trabalhos pendentes; ${item.deadlineKnown && item.daysUntilExam != null ? `avaliação em ${item.daysUntilExam} dias` : "data de avaliação não informada"}.`
     )
     .join("\n");
 
-  const systemInstruction = `Você é o NEXO, um assistente acadêmico executivo para universitários.
+  const gapsText = (context.learningGaps ?? []).map((gap) => `- ${gap.discipline} / ${gap.topic}: ${gap.note} (${gap.occurrences} ocorrência(s))`).join("\n");
+
+  const systemInstruction = `Você é o NEXO, um assistente estudantil que acompanha pessoas em diferentes jornadas de aprendizagem: faculdade, concurso, ENEM/vestibular, escola, certificações e outros objetivos de estudo.
 
 Sua função é ajudar o estudante a decidir o próximo passo, reduzir sobrecarga e transformar confusão em ação concreta. Você não é o professor da disciplina. Seja acolhedor, direto e prático. Nunca humilhe o estudante por atraso ou erro. Não invente informações sobre conteúdos que não foram fornecidos. Quando faltar conteúdo específico, peça o trecho, tema ou dúvida necessária.
 
@@ -119,43 +130,46 @@ Regras de resposta:
 - Comece pela ação mais útil agora.
 - Se o estudante estiver atrasado, priorize recuperação sustentável em vez de mandar fazer tudo de uma vez.
 - Para explicar, ensine passo a passo e confirme o conceito essencial.
-- Para resumo, destaque apenas o que precisa ser retido.
-- Para flashcards, entregue cartões em formato Pergunta → Resposta.
-- Para mapa mental, use uma hierarquia textual simples.
+- Para resumo, entregue o resumo completo na própria resposta. Nunca diga que criou, gerou ou preparou um resumo sem mostrar o conteúdo.
+- Para flashcards, entregue todos os cartões na própria resposta, um por linha, em formato "Pergunta → Resposta". Nunca diga "aqui estão" sem incluir os cartões.
+- Para mapa mental, entregue a hierarquia textual completa na própria resposta. Nunca diga que criou um mapa sem mostrar seus tópicos.
+- Se houver material anexado e a ação for resumo, flashcards, explicação ou mapa mental, a resposta deve conter conteúdo concreto extraído do material; não responda apenas com confirmação de que a tarefa foi realizada.
 - Para dúvidas, identifique primeiro onde está o bloqueio.
-- Não dê respostas acadêmicas inventadas ou cite fontes inexistentes.`;
+- Não dê respostas acadêmicas inventadas ou cite fontes inexistentes.
+- Nunca invente prazo ou urgência. Quando a data de avaliação não estiver informada, trate o prazo como desconhecido e organize apenas as pendências conhecidas.
+- Ao final, quando a conversa revelar uma dificuldade concreta que deve ser lembrada, inclua uma única linha invisível ao texto principal no formato [[NEXO_GAP:{"discipline":"nome","topic":"tópico específico","note":"descrição curta","strength":1}]]. Use strength de 1 (muita dificuldade) a 5 (domínio bom). Não gere essa marcação para perguntas genéricas, resumos ou pedidos sem evidência de dificuldade.
+- Quando houver um material anexado, use-o como fonte principal para explicar, resumir, criar flashcards, mapa mental ou responder dúvidas. Diferencie claramente o que está no material de conhecimento geral quando necessário.`;
 
   const prompt = `AÇÃO SOLICITADA: ${body.action ?? "conversa"}
 PRIORIDADE ATUAL: ${context.priority ?? "não definida"}
 MOTIVO DA PRIORIDADE: ${context.priorityReason ?? "não informado"}
 MINUTOS PENDENTES HOJE: ${context.pendingMinutes ?? 0}
-CARGA ACADÊMICA ATUAL:
-${workloadText || "- Não informada"}
-
-MENSAGEM DO ESTUDANTE:
-${message}`;
+CARGA DE ESTUDOS ATUAL:\n${workloadText || "- Não informada"}\nDIFICULDADES JÁ REGISTRADAS:\n${gapsText || "- Nenhuma dificuldade registrada"}\n\nMENSAGEM DO ESTUDANTE:
+${message || "Analise o material anexado e me ajude com ele."}\nMATERIAL ANEXADO: ${file ? file.name : "nenhum"}`;
 
   try {
     // Primeira linha: tenta o modelo principal algumas vezes com backoff exponencial.
     const primary = await callGemini(
       apiKey,
-      "gemini-3.7-flash",
+      "gemini-3.6-flash",
       systemInstruction,
       prompt,
+      file,
       3,
       [2000, 5000, 10000],
     );
 
     let result = primary;
 
-    // Se o modelo principal estiver congestionado, troca automaticamente para um modelo Flash-Lite.
-    if (primary.failure?.status === 503) {
+    // Se o modelo principal estiver congestionado ou limitado, troca automaticamente para um modelo Flash-Lite estável.
+    if ([404, 429, 500, 503].includes(primary.failure?.status ?? 0)) {
       console.warn("NEXO Gemini: ativando fallback para gemini-3.5-flash-lite.");
       result = await callGemini(
         apiKey,
         "gemini-3.5-flash-lite",
         systemInstruction,
         prompt,
+        file,
         2,
         [3000, 8000],
       );

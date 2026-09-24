@@ -1,6 +1,6 @@
 import { useMemo, useState, type CSSProperties } from "react";
 import { defaultAcademicState, loadAcademicState, saveAcademicState, type AcademicDiscipline } from "./lib/nexo/academicState";
-import { loadCmsActivities, saveCmsActivities, loadCmsEvents, toggleCmsActivityStep, type CmsActivity, type CmsEvent } from "./lib/nexo/cmsState";
+import { loadCmsActivities, saveCmsActivities, loadCmsEvents, saveCmsEvents, toggleCmsActivityStep, type CmsActivity, type CmsEvent } from "./lib/nexo/cmsState";
 
 type ActivityType = CmsActivity["type"];
 type ChecklistItem = CmsActivity["checklist"][number];
@@ -122,7 +122,7 @@ export default function AdminFixed() {
     const next = event.id ? events.map((e) => e.id === item.id ? item : e) : [...events, item];
     next.sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
     setEvents(next);
-    try { window.localStorage.setItem("nexo-admin-events", JSON.stringify(next)); } catch { /* mantém o fluxo utilizável */ }
+    saveCmsEvents(next);
     setEvent({ id: "", title: "", date: todayISO(), time: "19:00", disciplineCode: disciplines[0]?.code || "", kind: "Aula ao vivo" });
     flash("Evento salvo na agenda.");
   }
@@ -131,8 +131,7 @@ export default function AdminFixed() {
     if (!window.confirm("Voltar aos dados iniciais? Isso substitui as alterações feitas neste navegador.")) return;
     setDisciplines(defaultAcademicState); saveAcademicState(defaultAcademicState);
     setActivities([]); saveCmsActivities([]);
-    setEvents([]);
-    try { window.localStorage.setItem("nexo-admin-events", JSON.stringify([])); } catch { /* mantém o fluxo utilizável */ }
+    setEvents([]); saveCmsEvents([]);
     setActivity(newActivity(defaultAcademicState[0]?.code || ""));
     flash("Dados iniciais restaurados.");
   }
@@ -187,7 +186,7 @@ export default function AdminFixed() {
         {tab === "agenda" && <section>
           <div style={sectionHeader}><div><p className="eyebrow">COMPROMISSOS</p><h2 style={h2}>Agenda do semestre</h2><p style={paragraph}>Aulas ao vivo entram aqui como compromissos de horário.</p></div></div>
           <div style={formCard}><div style={formGrid}>{field("Título", event.title, (v) => setEvent({ ...event, title: v }))}{field("Data", event.date, (v) => setEvent({ ...event, date: v }), "date")}{field("Horário", event.time, (v) => setEvent({ ...event, time: v }), "time")}<label style={labelStyle}><span>Disciplina</span><select value={event.disciplineCode} onChange={(e) => setEvent({ ...event, disciplineCode: e.target.value })} style={inputStyle}><option value="">Geral</option>{disciplines.map((d) => <option key={d.code} value={d.code}>{d.name}</option>)}</select></label><label style={labelStyle}><span>Tipo</span><select value={event.kind} onChange={(e) => setEvent({ ...event, kind: e.target.value as EventItem["kind"] })} style={inputStyle}><option>Aula ao vivo</option><option>Prova</option><option>Entrega</option><option>Outro</option></select></label></div><button style={primaryButton} onClick={saveEvent}>{event.id ? "Atualizar evento" : "Adicionar à agenda"}</button></div>
-          {events.length === 0 ? <Empty text="Nenhum evento cadastrado ainda." /> : events.map((e) => <article key={e.id} style={listCard}><div><span className="task-type">{e.kind} · {e.date} · {e.time}</span><h3 style={h3}>{e.title}</h3><p style={paragraph}>{disciplines.find((d) => d.code === e.disciplineCode)?.name ?? "Geral"}</p></div><div style={{ display: "flex", gap: 8 }}><button style={ghostButton} onClick={() => setEvent(e)}>Editar</button><button style={deleteButton} onClick={() => { const next = events.filter((x) => x.id !== e.id); setEvents(next); try { window.localStorage.setItem("nexo-admin-events", JSON.stringify(next)); } catch { /* mantém o fluxo utilizável */ } flash("Evento removido."); }}>Excluir</button></div></article>)}
+          {events.length === 0 ? <Empty text="Nenhum evento cadastrado ainda." /> : events.map((e) => <article key={e.id} style={listCard}><div><span className="task-type">{e.kind} · {e.date} · {e.time}</span><h3 style={h3}>{e.title}</h3><p style={paragraph}>{disciplines.find((d) => d.code === e.disciplineCode)?.name ?? "Geral"}</p></div><div style={{ display: "flex", gap: 8 }}><button style={ghostButton} onClick={() => setEvent(e)}>Editar</button><button style={deleteButton} onClick={() => { const next = events.filter((x) => x.id !== e.id); setEvents(next); saveCmsEvents(next); flash("Evento removido."); }}>Excluir</button></div></article>)}
         </section>}
       </main>
     </div>

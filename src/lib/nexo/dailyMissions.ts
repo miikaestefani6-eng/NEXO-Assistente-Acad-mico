@@ -17,6 +17,7 @@ type DisciplineWorkload = {
   pendingExercises: number;
   pendingAssignments: number;
   daysUntilExam: number;
+  deadlineKnown?: boolean;
 };
 
 export function generateDailyMissions(
@@ -25,7 +26,8 @@ export function generateDailyMissions(
 ): DailyMission[] {
   const ranked = workloads.map((workload) => {
     const plan = buildRecoveryPlan({ ...workload, availableMinutesPerDay: availableMinutes });
-    return { workload, plan, pressure: (workload.pendingLessons + workload.pendingExercises + workload.pendingAssignments) / Math.max(1, workload.daysUntilExam) };
+    const pending = workload.pendingLessons + workload.pendingExercises + workload.pendingAssignments;
+    return { workload, plan, pressure: workload.deadlineKnown ? pending / Math.max(1, workload.daysUntilExam) : pending * 0.08 };
   }).sort((a, b) => b.pressure - a.pressure);
 
   const missions: DailyMission[] = [];

@@ -1,0 +1,16 @@
+name: Beta Build
+on:
+  push:
+    branches: [nexo-beta-comercial]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - run: npm install
+      - run: npm run build
+
