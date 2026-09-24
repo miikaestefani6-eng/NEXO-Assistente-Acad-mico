@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { getCriticalDiscipline } from "./lib/nexo/adaptivePlanner";
 import { loadAcademicState } from "./lib/nexo/academicState";
+import { saveCmsActivities, loadCmsActivities } from "./lib/nexo/cmsState";
 import { activeLearningGaps, recordLearningGap } from "./lib/nexo/learningMemory";
 import { registerStudyMaterial } from "./lib/nexo/studyMaterials";
 import { uploadStudyMaterial } from "./lib/nexo/cloudState";
@@ -31,6 +32,7 @@ export default function StudyAssistant({ open, onClose }: { open:boolean; onClos
   const [file,setFile]=useState<File|null>(null);
   const [uploadWarning,setUploadWarning]=useState("");
   const [lastRequest,setLastRequest]=useState<{action:AssistantAction|null;hadFile:boolean}|null>(null);
+  const [savedToPlan,setSavedToPlan]=useState(false);
   const fileRef=useRef<HTMLInputElement>(null);
   if(!open) return null;
 
@@ -39,13 +41,26 @@ export default function StudyAssistant({ open, onClose }: { open:boolean; onClos
   const pendingMinutes=work.reduce((sum,item)=>sum+Math.max(0,item.pendingLessons)*30+Math.max(0,item.pendingExercises)*15+Math.max(0,item.pendingAssignments)*45,0);
   const subject=critical?.discipline ?? "seus estudos";
 
+  function addMaterialToPlan() {
+    if (!lastRequest?.hadFile || !file && !answer) return;
+    const state=loadAcademicState();
+    const discipline=critical ? state.find(d=>d.name===critical.discipline) : state[0];
+    if(!discipline){setError("Adicione uma disciplina antes de transformar o material em missão.");return;}
+    const title=file?.name ? `Estudar ${file.name}` : `Revisar material de ${discipline.name}`;
+    const activities=loadCmsActivities();
+    if(!activities.some(a=>a.title===title&&a.disciplineCode===discipline.code&&!a.done)){
+      saveCmsActivities([...activities,{id:`material-study-${Date.now()}`,title,disciplineCode:discipline.code,type:"Revisão",dueDate:new Date().toISOString().slice(0,10),minutes:30,done:false,checklist:[{id:"review",label:"Revisar os pontos principais do material",done:false},{id:"practice",label:"Registrar dúvidas ou pontos que precisam de reforço",done:false}]}]);
+    }
+    setSavedToPlan(true);
+  }
+
   function choose(next:AssistantAction) {
     setAction(next); setError("");
     setInput(next==="late"?"Fiquei atrasado. O que devo fazer agora?":next==="doubt"?"Não entendi a matéria e preciso destravar.":next==="explain"?"Explique o conteúdo que devo estudar agora.":next==="summary"?"Faça um resumo do conteúdo que devo estudar agora.":next==="flashcards"?"Crie flashcards para eu revisar agora.":"Monte um mapa mental do conteúdo que devo estudar agora.");
   }
   async function ask() {
     const message=input.trim(); if((!message&&!file)||loading) return;
-    setLoading(true); setError(""); setUploadWarning("");
+    setLoading(true); setError(""); setUploadWarning(""); setSavedToPlan(false);
     try {
       const filePayload=file?{name:file.name,mimeType:file.type||"application/pdf",data:await fileToBase64(file)}:null;
       const response=await fetch("/api/nexo-assistant",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
@@ -69,7 +84,7 @@ export default function StudyAssistant({ open, onClose }: { open:boolean; onClos
   return <div className="assistant-overlay" onClick={onClose}><aside className="assistant-panel" onClick={e=>e.stopPropagation()}>
     <div className="assistant-panel-header"><div><span className="assistant-kicker">NEXO · PRECISO DE AJUDA</span><h2>Vamos destravar isso.</h2><p>Converse comigo ou envie o material que está estudando.</p></div><button className="assistant-close" onClick={onClose}>×</button></div>
     <div className="assistant-context"><span>CONTEXTO ATUAL</span><strong>{subject}</strong><small>{critical?.reason||"O NEXO usa seu plano, pendências e dificuldades para responder."}</small></div>
-    {answer&&<div className="assistant-response"><span>✨ NEXO</span>{lastRequest?.hadFile&&<small className="assistant-source-note">Resposta criada a partir do material anexado.</small>}<div style={{whiteSpace:"pre-wrap",lineHeight:1.65}}>{answer}</div></div>}
+    {answer&&<div className="assistant-response"><span>✨ NEXO</span>{lastRequest?.hadFile&&<small className="assistant-source-note">Resposta criada a partir do material anexado.</small>}<div style={{whiteSpace:"pre-wrap",lineHeight:1.65}}>{answer}</div>{lastRequest?.hadFile&&<div className="assistant-result-actions"><button disabled={savedToPlan} onClick={addMaterialToPlan}>{savedToPlan?"✓ Adicionado ao plano":"Adicionar revisão ao meu plano"}</button></div>}</div>}
     {loading&&<div className="assistant-response"><span>✨ NEXO</span><p>Estou pensando no melhor próximo passo para você…</p></div>}
     {error&&<div className="assistant-response"><span>⚠️ NEXO</span><p>{error}</p></div>}{uploadWarning&&<div className="assistant-response"><span>⚠️ ARQUIVO</span><p>{uploadWarning}</p></div>}
     <div className="assistant-actions"><button onClick={()=>choose("explain")}>📖 Explicar conteúdo</button><button onClick={()=>choose("summary")}>📝 Resumir aula</button><button onClick={()=>choose("flashcards")}>🧠 Criar flashcards</button><button onClick={()=>choose("mindmap")}>🗺️ Mapa mental</button><button onClick={()=>choose("late")}>⏳ Estou atrasado</button><button onClick={()=>choose("doubt")}>❓ Não entendi a matéria</button></div>
