@@ -12,8 +12,7 @@ type Task = { id: string; cmsId?: string; title: string; subject: string; durati
 function todayISO() { return new Date().toISOString().slice(0, 10); }
 function todayLabel() { return new Intl.DateTimeFormat("pt-BR",{weekday:"long",day:"numeric",month:"long"}).format(new Date()).toUpperCase(); }
 
-function buildFallbackTasks(availableMinutes = loadStudyProfile().availableMinutesPerDay): Task[] {
-  const state = loadAcademicState();
+function buildFallbackTasks(availableMinutes = loadStudyProfile().availableMinutesPerDay, state = loadAcademicState()): Task[] {
   return generateDailyMissions(state.map(({ code, name, lessons, lessonsDone, exercises, exercisesDone, assignments, assignmentsDone, daysUntilExam, examDate }) => ({ code, name, pendingLessons: lessons - lessonsDone, pendingExercises: exercises - exercisesDone, pendingAssignments: assignments - assignmentsDone, daysUntilExam, deadlineKnown: Boolean(examDate) })), availableMinutes).map((mission, index) => ({
     id: mission.id, title: mission.title, subject: mission.subject, duration: `${mission.duration} min`, durationMinutes: mission.duration, type: mission.type, time: index === 0 ? "Agora" : index === 1 ? "Depois" : "A seguir",
     description: mission.priority === "urgente" ? "Prioridade alta: avance nesta missão antes de mudar de disciplina." : "O NEXO colocou esta missão na sequência para manter seu semestre sob controle.",
@@ -35,8 +34,26 @@ function buildTasks(): Task[] {
   }));
   const committedMinutes = cmsTasks.reduce((sum, task) => sum + task.durationMinutes, 0);
   const remainingMinutes = Math.max(0, loadStudyProfile().availableMinutesPerDay - committedMinutes);
+  const reservedByDiscipline = new Map<string, { lessons: number; exercises: number; assignments: number }>();
+  for (const activity of activities) {
+    const reserved = reservedByDiscipline.get(activity.disciplineCode) ?? { lessons: 0, exercises: 0, assignments: 0 };
+    if (activity.type === "Aula da plataforma") reserved.lessons += 1;
+    if (activity.type === "Exercício") reserved.exercises += 1;
+    if (activity.type === "Trabalho") reserved.assignments += 1;
+    reservedByDiscipline.set(activity.disciplineCode, reserved);
+  }
+  const plannerState = state.map((discipline) => {
+    const reserved = reservedByDiscipline.get(discipline.code);
+    if (!reserved) return discipline;
+    return {
+      ...discipline,
+      lessonsDone: Math.min(discipline.lessons, discipline.lessonsDone + reserved.lessons),
+      exercisesDone: Math.min(discipline.exercises, discipline.exercisesDone + reserved.exercises),
+      assignmentsDone: Math.min(discipline.assignments, discipline.assignmentsDone + reserved.assignments),
+    };
+  });
   const plannedTasks = remainingMinutes >= 15
-    ? buildFallbackTasks(remainingMinutes)
+    ? buildFallbackTasks(remainingMinutes, plannerState)
     : [];
   return [...cmsTasks, ...plannedTasks].map((task, index) => ({
     ...task,
