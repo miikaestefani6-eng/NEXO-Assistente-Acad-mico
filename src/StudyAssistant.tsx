@@ -33,6 +33,7 @@ export default function StudyAssistant({ open, onClose }: { open:boolean; onClos
   const [uploadWarning,setUploadWarning]=useState("");
   const [lastRequest,setLastRequest]=useState<{action:AssistantAction|null;hadFile:boolean}|null>(null);
   const [savedToPlan,setSavedToPlan]=useState(false);
+  const [lastMaterialName,setLastMaterialName]=useState("");
   const fileRef=useRef<HTMLInputElement>(null);
   if(!open) return null;
 
@@ -46,7 +47,7 @@ export default function StudyAssistant({ open, onClose }: { open:boolean; onClos
     const state=loadAcademicState();
     const discipline=critical ? state.find(d=>d.name===critical.discipline) : state[0];
     if(!discipline){setError("Adicione uma disciplina antes de transformar o material em missão.");return;}
-    const title=file?.name ? `Estudar ${file.name}` : `Revisar material de ${discipline.name}`;
+    const title=lastMaterialName ? `Estudar ${lastMaterialName}` : `Revisar material de ${discipline.name}`;
     const activities=loadCmsActivities();
     if(!activities.some(a=>a.title===title&&a.disciplineCode===discipline.code&&!a.done)){
       saveCmsActivities([...activities,{id:`material-study-${Date.now()}`,title,disciplineCode:discipline.code,type:"Revisão",dueDate:new Date().toISOString().slice(0,10),minutes:30,done:false,checklist:[{id:"review",label:"Revisar os pontos principais do material",done:false},{id:"practice",label:"Registrar dúvidas ou pontos que precisam de reforço",done:false}]}]);
@@ -73,6 +74,7 @@ export default function StudyAssistant({ open, onClose }: { open:boolean; onClos
       const raw=String(data.answer||"");
       if(!raw.trim()) throw new Error("O NEXO processou o pedido, mas não recebeu conteúdo para mostrar. Tente novamente.");
       setLastRequest({action,hadFile:Boolean(file)});
+      if(file) setLastMaterialName(file.name);
       const gap=raw.match(/\[\[NEXO_GAP:(\{.*?\})\]\]/s);
       if(gap){try{recordLearningGap(JSON.parse(gap[1]));}catch{/* mantém resposta */}}
       setAnswer(raw.replace(/\n?\[\[NEXO_GAP:.*?\]\]/s,"").trim());
@@ -88,7 +90,7 @@ export default function StudyAssistant({ open, onClose }: { open:boolean; onClos
     {loading&&<div className="assistant-response"><span>✨ NEXO</span><p>Estou pensando no melhor próximo passo para você…</p></div>}
     {error&&<div className="assistant-response"><span>⚠️ NEXO</span><p>{error}</p></div>}{uploadWarning&&<div className="assistant-response"><span>⚠️ ARQUIVO</span><p>{uploadWarning}</p></div>}
     <div className="assistant-actions"><button onClick={()=>choose("explain")}>📖 Explicar conteúdo</button><button onClick={()=>choose("summary")}>📝 Resumir aula</button><button onClick={()=>choose("flashcards")}>🧠 Criar flashcards</button><button onClick={()=>choose("mindmap")}>🗺️ Mapa mental</button><button onClick={()=>choose("late")}>⏳ Estou atrasado</button><button onClick={()=>choose("doubt")}>❓ Não entendi a matéria</button></div>
-    <input ref={fileRef} type="file" accept=".pdf,image/png,image/jpeg" hidden onChange={e=>{const selected=e.target.files?.[0]??null;setError("");setUploadWarning("");if(selected&&selected.size>8_000_000){setFile(null);setError("Esse arquivo é grande demais para o beta. Envie um PDF ou imagem de até 8 MB.");e.currentTarget.value="";return;}setFile(selected);setAnswer("");setLastRequest(null);}}/>
+    <input ref={fileRef} type="file" accept=".pdf,image/png,image/jpeg" hidden onChange={e=>{const selected=e.target.files?.[0]??null;setError("");setUploadWarning("");if(selected&&selected.size>8_000_000){setFile(null);setError("Esse arquivo é grande demais para o beta. Envie um PDF ou imagem de até 8 MB.");e.currentTarget.value="";return;}setFile(selected);setAnswer("");setLastRequest(null);setLastMaterialName(selected?.name||"");}}/>
     {file&&<div className="assistant-file"><span>📎</span><div><strong>{file.name}</strong><small>O NEXO vai usar este material para responder.</small></div><button onClick={()=>setFile(null)}>×</button></div>}
     <div className="assistant-input"><button className="assistant-attach" title="Anexar material" onClick={()=>fileRef.current?.click()}>📎</button><input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")void ask();}} placeholder="O que você precisa destravar?"/><button disabled={loading||(!input.trim()&&!file)} onClick={()=>void ask()}>Enviar</button></div>
   </aside></div>;
